@@ -341,19 +341,23 @@ void Mod::LoadProvinceImage() {
     uint totalPixels = width * height * 4;
     uint32_t previousColor = 0x0;
 
-    for(uint index = 0; index <= totalPixels; index += 4) {
+    bool hasProvince = false;
+
+    const auto& GetIndexPosition = [&](uint index) {
+        return sf::Vector2i((index / 4) % width, floor(index / (4*width)));
+    };
+
+    for(uint index = 0; index < totalPixels; index += 4) {
         uint32_t color = (pixels[index] << 24) + (pixels[index+1] << 16) + (pixels[index+2] << 8) + (pixels[index+3]);
-        
-        uint x = (index / 4) % width;
-        uint y = floor(index / (4*height));
 
         if((color & 0xFF) != 0xFF) {
-            ERROR("Transparent pixel in province image at coordinates ({},{})", x, y);
+            sf::Vector2i pos = GetIndexPosition(index);
+            ERROR("Transparent pixel in province image at coordinates ({},{})", pos.x, pos.y);
             continue;
         }
 
         const auto& province = m_Provinces.find(color);
-        bool hasProvince = (province == m_Provinces.end());
+        hasProvince = (previousColor == color && hasProvince) || (province != m_Provinces.end());
         bool alreadySeen = (previousColor == color || colors.count(color) > 0);
 
         previousColor = color;
@@ -368,8 +372,10 @@ void Mod::LoadProvinceImage() {
         }
 
         if(hasProvince) {
-            if(!alreadySeen)
-                province->second->SetImagePosition(sf::Vector2i(x, y));
+            if(!alreadySeen) {
+                sf::Vector2i pos = GetIndexPosition(index);
+                province->second->SetImagePosition(pos);
+            }
             province->second->IncrementImagePixelsCount();
         }
     }

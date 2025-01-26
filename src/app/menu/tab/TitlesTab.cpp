@@ -76,7 +76,7 @@ void TitlesTab::Render() {
                 }
                 if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
                     sf::Vector2i titlePos = title->GetImagePosition(mod);
-                    m_Menu->GetCamera().setCenter(titlePos.x, titlePos.y - m_Menu->GetCamera().getSize().y/2);
+                    m_Menu->GetCamera().setCenter(titlePos.x, titlePos.y);
                 }
 
                 ImGui::TableNextColumn();
@@ -99,7 +99,7 @@ void TitlesTab::Render() {
                 }
                 if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
                     sf::Vector2i titlePos = title->GetImagePosition(mod);
-                    m_Menu->GetCamera().setCenter(titlePos.x, titlePos.y - m_Menu->GetCamera().getSize().y/2);
+                    m_Menu->GetCamera().setCenter(titlePos.x, titlePos.y);
                 }
 
                 ImGui::TableNextColumn();

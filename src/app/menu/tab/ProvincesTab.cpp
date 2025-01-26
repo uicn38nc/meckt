@@ -1,6 +1,7 @@
 #include "ProvincesTab.hpp"
 #include "app/menu/EditorMenu.hpp"
 #include "app/mod/Mod.hpp"
+#include "app/App.hpp"
 #include "app/map/Province.hpp"
 #include "app/map/Title.hpp"
 
@@ -45,9 +46,13 @@ void ProvincesTab::Render() {
             ImGui::TreeNodeEx(std::to_string(province->GetId()).c_str(), flags);
             ImGui::TableNextColumn();
 
-            if(ImGui::IsItemClicked()) {
+            if(ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
                 m_Menu->GetSelectionHandler().ClearSelection();
                 m_Menu->GetSelectionHandler().Select(province);
+            }
+            if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+                sf::Vector2i titlePos = province->GetImagePosition();
+                m_Menu->GetCamera().setCenter(titlePos.x, titlePos.y);
             }
 
             ImGui::Text(province->GetName().c_str());
