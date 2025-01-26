@@ -339,46 +339,76 @@ void Mod::LoadProvinceImage() {
     uint width = m_ProvinceImage.getSize().x;
     uint height = m_ProvinceImage.getSize().y;
     uint totalPixels = width * height * 4;
-    uint32_t previousColor = 0x0;
-
-    bool hasProvince = false;
 
     const auto& GetIndexPosition = [&](uint index) {
+        index = index - 4;
         return sf::Vector2i((index / 4) % width, floor(index / (4*width)));
     };
 
-    for(uint index = 0; index < totalPixels; index += 4) {
-        uint32_t color = (pixels[index] << 24) + (pixels[index+1] << 16) + (pixels[index+2] << 8) + (pixels[index+3]);
+    // Split the image vertically between all the threads.
+    const int threadsCount = 4;
+    std::vector<UniquePtr<sf::Thread>> threads;
+    const uint threadRange = totalPixels / threadsCount;
 
-        if((color & 0xFF) != 0xFF) {
-            sf::Vector2i pos = GetIndexPosition(index);
-            ERROR("Transparent pixel in province image at coordinates ({},{})", pos.x, pos.y);
-            continue;
-        }
+    for(uint i = 0; i < threadsCount; i++) {
 
-        const auto& province = m_Provinces.find(color);
-        hasProvince = (previousColor == color && hasProvince) || (province != m_Provinces.end());
-        bool alreadySeen = (previousColor == color || colors.count(color) > 0);
+        threads.push_back(MakeUnique<sf::Thread>([&, i](){
+            uint startIndex = i * threadRange;
+            uint endIndex = (i == threadsCount-1) ? totalPixels : (i+1) * threadRange;
+            uint index = startIndex;
 
-        previousColor = color;
+            sf::Uint32 color = 0x000000FF;
+            sf::Uint32 previousColor = 0x00000000;
+            bool hasProvince = false;
 
-        if(!alreadySeen) {
-            colors[color] = true;
-        }
+            // Cast to edit directly the bytes of the color and pixels.
+            char* colorPtr = static_cast<char*>((void*) &color);
 
-        if(!alreadySeen && !hasProvince) {
-            ERROR("Color found in image but missing province from definition.csv: ({},{},{})", pixels[index], pixels[index+1], pixels[index+2]);
-            continue;
-        }
+            while(index < endIndex) {
+                // Copy the four bytes corresponding to RGBA from the provinces image pixels
+                // to the array for the titles image.
+                // The bytes need to be flipped, otherwise provinceColor would
+                // be ABGR and we couldn't find the associated title color in the map.
+                colorPtr[3] = pixels[index++]; // R
+                colorPtr[2] = pixels[index++]; // G
+                colorPtr[1] = pixels[index++]; // B
+                index++;
 
-        if(hasProvince) {
-            if(!alreadySeen) {
-                sf::Vector2i pos = GetIndexPosition(index);
-                province->second->SetImagePosition(pos);
+                if((color & 0xFF) != 0xFF) {
+                    sf::Vector2i pos = GetIndexPosition(index);
+                    ERROR("Transparent pixel in province image at coordinates ({},{})", pos.x, pos.y);
+                    continue;
+                }
+
+                const auto& province = m_Provinces.find(color);
+                hasProvince = (previousColor == color && hasProvince) || (province != m_Provinces.end());
+                bool alreadySeen = (previousColor == color || colors.count(color) > 0);
+
+                previousColor = color;
+
+                if(!alreadySeen) {
+                    colors[color] = true;
+                }
+
+                if(!alreadySeen && !hasProvince) {
+                    ERROR("Color found in image but missing province from definition.csv: ({},{},{})", pixels[index], pixels[index+1], pixels[index+2]);
+                    continue;
+                }
+
+                if(hasProvince) {
+                    if(!alreadySeen) {
+                        sf::Vector2i pos = GetIndexPosition(index);
+                        province->second->SetImagePosition(pos);
+                    }
+                    province->second->IncrementImagePixelsCount();
+                }
             }
-            province->second->IncrementImagePixelsCount();
-        }
+        }));
+        threads[threads.size()-1]->launch();
     }
+
+    for(auto& thread : threads)
+        thread->wait();
 }
 
 void Mod::LoadProvincesDefinition() {
