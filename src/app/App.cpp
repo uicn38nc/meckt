@@ -54,26 +54,39 @@ void App::Init() {
 
 void App::Run() {
     // Main application loop.
-    while (m_Window.isOpen()) {
+    while(m_Window.isOpen()) {
 
         // Handle SFML events.
+        ImGuiIO& io = ImGui::GetIO();
         sf::Event event;
-        while (m_Window.pollEvent(event)) {
+        while(m_Window.pollEvent(event)) {
             ImGui::SFML::ProcessEvent(m_Window, event);
 
-            if (event.type == sf::Event::Closed) {
+            if(event.type == sf::Event::Closed) {
                 m_Window.close();
                 break;
             }
 
-            if (event.type == sf::Event::Resized) {
+            if(event.type == sf::Event::Resized) {
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 m_Window.setView(sf::View(visibleArea));
                 Configuration::windowResolution = m_Window.getSize();
             }
 
-            if (ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard)
-                break;
+            if((event.type == sf::Event::MouseButtonPressed
+                || event.type == sf::Event::MouseButtonReleased
+                || event.type == sf::Event::MouseEntered
+                || event.type == sf::Event::MouseLeft
+                || event.type == sf::Event::MouseMoved
+                || event.type == sf::Event::MouseWheelMoved
+                || event.type == sf::Event::MouseWheelScrolled)
+                && io.WantCaptureMouse)
+                continue;
+                
+            if((event.type == sf::Event::KeyPressed
+                || event.type == sf::Event::KeyReleased)
+                && io.WantCaptureKeyboard)
+                continue;
 
             m_ActiveMenu->Event(event);
         }
@@ -85,9 +98,9 @@ void App::Run() {
 
         // Drawing.
         m_Window.clear();
+        ImGui::ShowDemoWindow();
         m_ActiveMenu->Render();
 
-        ImGui::ShowDemoWindow();
         ImGui::SFML::Render(m_Window);
 
         m_Window.display();
