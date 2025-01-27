@@ -893,6 +893,9 @@ Parser::Node Mod::ExportTitle(const SharedPtr<Title>& title, int depth) {
 
         if(!title->Is(TitleType::COUNTY) && highTitle->GetCapitalTitle() != nullptr)
             data.Put("capital", highTitle->GetCapitalTitle()->GetName());
+        
+        if(title->IsLandless())
+            data.Put("landless", true);
 
         for(const auto& dejureTitle : highTitle->GetDejureTitles()) {
             data.Put(dejureTitle->GetName(), this->ExportTitle(dejureTitle, depth+1));
