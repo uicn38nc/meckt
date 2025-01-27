@@ -4,17 +4,6 @@
 using namespace Parser;
 using namespace Parser::Impl;
 
-std::string Parser::OperatorToString(Operator op) {
-    switch(op) {
-        case Operator::EQUAL: return "=";
-        case Operator::LESS: return "<";
-        case Operator::LESS_EQUAL: return "<=";
-        case Operator::GREATER: return ">";
-        case Operator::GREATER_EQUAL: return ">=";
-    }
-    return "";
-}
-
 ////////////////////////////////
 //         Node class         //
 ////////////////////////////////
@@ -428,8 +417,10 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
         PToken token = tokens.front();
         tokens.pop_front();
 
-        if(token->Is(TokenType::RIGHT_BRACE))
-            break;
+        if(token->Is(TokenType::RIGHT_BRACE)) {
+            values.SetDepth(depth);
+            return values;
+        }
             
         if(token->Is(TokenType::COMMENT))
             continue;
@@ -492,6 +483,16 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
         }
     }
 
+    // Only the root (first of Parse) can be defined without being
+    // enclosed by curly brackets.
+    if(depth > 0)
+        throw std::runtime_error("error: missing closing curly bracket ('}').");
+    
+    if(state == ParsingState::OPERATOR)
+        throw std::runtime_error(fmt::format("error: unexpected end after key {}.", key));
+    if(state == ParsingState::VALUE)
+        throw std::runtime_error(fmt::format("error: unexpected end after operator {}.", op));
+
     values.SetDepth(depth);
     return values;
 }
@@ -549,7 +550,7 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
             return ParseList<std::string>(tokens);
     }
     
-    return Parse(tokens);
+    return Parse(tokens, 1);
     // throw std::runtime_error("error: failed to parse node value.");
 }
 

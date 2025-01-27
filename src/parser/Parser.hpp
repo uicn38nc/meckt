@@ -16,7 +16,6 @@ namespace Parser {
         GREATER,
         GREATER_EQUAL,
     };
-    std::string OperatorToString(Operator op);
 
     enum class ValueType {
         NUMBER,
@@ -158,6 +157,26 @@ namespace Parser {
 //          Formatters for fmt           //
 ///////////////////////////////////////////
 template <>
+class fmt::formatter<Parser::Operator> {
+public:
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.begin();
+    }
+
+    template <typename Context>
+    constexpr auto format(const Parser::Operator& key, Context& ctx) const {
+        switch(key) {
+            case Parser::Operator::EQUAL: return format_to(ctx.out(), "=");
+            case Parser::Operator::LESS: return format_to(ctx.out(), "<");
+            case Parser::Operator::LESS_EQUAL: return format_to(ctx.out(), "<=");
+            case Parser::Operator::GREATER: return format_to(ctx.out(), ">");
+            case Parser::Operator::GREATER_EQUAL: return format_to(ctx.out(), ">=");
+        }
+        return format_to(ctx.out(), "");
+    }
+};
+
+template <>
 class fmt::formatter<Parser::Key> {
 public:
     constexpr auto parse(format_parse_context& ctx) {
@@ -237,7 +256,7 @@ public:
                     "{}{} {} {}",
                     std::string(p.second.second.GetDepth()-1, '\t'), // Indentation
                     p.first, // Key
-                    Parser::OperatorToString(p.second.first), // Operator
+                    fmt::format("{}", p.second.first), // Operator
                     p.second.second // Value
                 );
             });
