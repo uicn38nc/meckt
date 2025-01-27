@@ -3,6 +3,7 @@
 #include "app/ResourceManager.hpp"
 
 enum class Textures : int {
+    LOGO,
     COUNT
 };
 
@@ -23,6 +24,10 @@ public:
     Configuration& operator=(const Configuration&) = delete;
 
     //Settings
+    inline static std::string buildVersion = "1.0.0";
+    inline static std::string buildCredits = "made by Xorrad";
+    inline static std::string githubURL = "https://github.com/Xorrad/meckt";
+
     inline static sf::Vector2u windowResolution = {800, 600};
     
     // Resources

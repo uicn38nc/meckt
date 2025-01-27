@@ -4,13 +4,17 @@ void Configuration::Initialize() {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     windowResolution = {desktopMode.width, desktopMode.height};
 
+#ifndef DEBUG
+    buildVersion = buildVersion + " (debug)";
+#endif
+
     InitializeTextures();
     InitializeFonts();
     InitializeShaders();
 }
 
 void Configuration::InitializeTextures() {
-    // textures.Load(Textures::TEST, "assets/textures/test.jpeg");
+    textures.Load(Textures::LOGO, "assets/textures/logo.png");
 }
 
 void Configuration::InitializeFonts() {
