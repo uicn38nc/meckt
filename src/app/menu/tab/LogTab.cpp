@@ -28,9 +28,10 @@ void LogTab::Render() {
             for(int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
                 const SharedPtr<Logger::Message>& message = logger->GetMessages()[i];
                 sf::Color color = message->GetColor();
+                std::string text = fmt::format("[{}]: {}", message->GetTimeHMS(), message->GetText());
                 ImGui::TextColored(
                     ImVec4(color.r/255.f, color.g/255.f, color.b/255.f, color.a/255.f),
-                    message->ToString().c_str()
+                    text.c_str()
                 );
             }
         }
