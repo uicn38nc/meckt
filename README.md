@@ -6,9 +6,37 @@
 
 Meckt is a tool whose goal is making total conversion mod easier and less cumbersome. It includes tools to generate provinces from the provinces image, to create and edit titles using a user interface and a map, to manage the history of titles.
 
+> **Warning:**  
+> Please use this tool with caution. Exporting modifications impact on the internal structure of your files.  
+> Always ensure you have a **backup of your files before exporting** to prevent any unintended changes or data loss.  
+
+## Overview
+
+![overview](images/overview.png)  
+
+![wrapping](images/wrapping.png)  
+
+![views](images/views.png)
+
+## Controls
+
+- **Select Multiple Titles:** Press `Shift + Left Mouse Button (LMB)`.
+- **Unselect One Title:** Press `Ctrl + Left Mouse Button (LMB)`.
+
+- **Unwrap Title:** Press `Ctrl + Left Mouse Button (LMB)`.
+- **Wrap Titles Back:** Press `Right Mouse Button (RMB)`.
+
 ## Contributing
 
 Contributions to the project are highly appreciated! There are several ways to get involved: you can contribute by reporting any issues you encounter, suggesting new features that could enhance the project, or even by actively participating in the development process through the submission of pull requests.
+
+## Third-Party Libraries
+- **Simple and Fast Multimedia Library** (https://www.sfml-dev.org/)
+- **Dear ImGui** (https://github.com/ocornut/imgui/)
+- **ImGui-SFML** (https://github.com/SFML/imgui-sfml)
+- **Backward-cpp** (https://github.com/bombela/backward-cpp)
+- **{fmt}** (https://github.com/bombela/backward-cpp)
+- **Native File Dialog** (https://github.com/mlabbe/nativefiledialog)
 
 ## License
 
