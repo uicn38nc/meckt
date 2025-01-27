@@ -186,6 +186,10 @@ void Node::Put(const Key& key, const RawValue& value, Operator op) {
     this->Put(key, Node(value), op);
 }
 
+void Node::Put(const Key& key, const sf::Color& color, Operator op) {
+    this->Put(key, Node(color), op);
+}
+
 Node Node::Remove(const Key& key) {
     if(!this->Is(ValueType::NODE))
         throw std::runtime_error("error: invalid use of 'Node::Remove' on leaf node.");

@@ -58,6 +58,7 @@ namespace Parser {
             bool ContainsKey(const Key& key) const;
             void Put(const Key& key, const Node& node, Operator op = Operator::EQUAL);
             void Put(const Key& key, const RawValue& value, Operator op = Operator::EQUAL);
+            void Put(const Key& key, const sf::Color& color, Operator op = Operator::EQUAL);
             Node Remove(const Key& key);
 
             // Overload cast for LeafHolder.
@@ -273,7 +274,8 @@ public:
         std::string indent = std::string(node.GetDepth()-1, '\t');
 
         // Sort the list by ascending order.
-        std::sort(l.begin(), l.end(), [=](double a, double b) { return a < b; });
+        // Note: DO NOT sort the list because the order can matter (e.g colors).
+        // std::sort(l.begin(), l.end(), [=](double a, double b) { return a < b; });
 
         // Make a list of the lines to build the list
         // with LIST and RANGE depending on the values.
