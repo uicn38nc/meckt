@@ -619,9 +619,9 @@ std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Pars
                 std::vector<SharedPtr<Title>> dejureTitles = ParseTitles(filePath, value);
 
                 if(landless && !dejureTitles.empty())
-                    ERROR("Landless title has dejure vassals in definition: {}", key);
+                    WARNING("Landless title has dejure vassals in definition: {}", key);
                 else if(!landless && dejureTitles.empty())
-                    ERROR("Title does not have any dejure vassals in definition: {}", key);
+                    WARNING("Title does not have any dejure vassals in definition: {}", key);
 
                 for(const auto& dejureTitle : dejureTitles) {
                     highTitle->AddDejureTitle(dejureTitle);
