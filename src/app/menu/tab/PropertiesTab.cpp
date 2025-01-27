@@ -6,6 +6,7 @@
 #include "app/mod/Mod.hpp"
 #include "app/map/Province.hpp"
 #include "app/map/Title.hpp"
+#include "parser/Parser.hpp"
 
 #include "imgui/imgui.hpp"
 #include "app/menu/ImGuiStyle.hpp"
@@ -154,6 +155,17 @@ void PropertiesTab::RenderProvinces() {
     }
 }
 
+// Because the user inputs are strings for the history data,
+// we can't directly use a pointer to a variable in the
+// Title class.
+// Therefore, TitleHistoryState is used as a temporary buffer
+// for the input, which will be parsed and added to the history
+// Parser::Node in the Title class.
+struct TitleHistoryState {
+    std::string rawData;
+    std::string parsingError;
+};
+
 void PropertiesTab::RenderTitles() {
     for(auto& title : m_Menu->GetSelectionHandler().GetTitles()) {
                 
@@ -181,6 +193,60 @@ void PropertiesTab::RenderTitles() {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
             ImGui::Checkbox("Landless", &title->m_Landless);
             ImGui::PopStyleVar();
+            
+            // TITLE: history (collapsing header + child window (for borders) + collapsing header for each dates)
+            ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+            if(ImGui::CollapsingHeader("history")) {
+                if(ImGui::BeginChild((title->GetName() + "-history").c_str(), ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
+
+                    // TODO: improve this to avoid "memory leaks" when switching titles or even tabs.
+
+                    // Each date has its own data/history and each title can have
+                    // several dates. To avoid overwritting user inputs, the buffer are saved
+                    // in a map using the key: title_name-date.
+                    // Keys are erased from the map when the date TreeNode has been closed
+                    // and if the edits have been saved successfully (no parsing error).
+                    static std::unordered_map<std::string, TitleHistoryState> historyStates;
+
+                    for(auto const& [date, data] : title->GetHistory() | std::views::reverse) {
+                        std::string stateKey = fmt::format("{}-{}", title->GetName(), date);
+
+                        if(ImGui::TreeNodeEx(fmt::format("{}", date).c_str(), ImGuiTreeNodeFlags_SpanFullWidth)) {
+                            ImGui::PushID(stateKey.c_str());
+
+                            if(historyStates.count(stateKey) == 0) {
+                                historyStates[stateKey] = TitleHistoryState{
+                                    fmt::format("{}", *data),
+                                    "",
+                                };
+                            }
+
+                            ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 10);
+                            if(ImGui::InputTextMultiline("data", &historyStates[stateKey].rawData, ImVec2(0,0), ImGuiInputTextFlags_AllowTabInput)) {
+                                try {
+                                    Parser::Node newData = Parser::Parse(historyStates[stateKey].rawData);
+                                    historyStates[stateKey].parsingError = "";
+                                    title->AddHistory(date, newData);
+                                }
+                                catch(const std::exception& e) {
+                                    historyStates[stateKey].parsingError = e.what();
+                                }
+                            }
+
+                            if(!historyStates[stateKey].parsingError.empty()) {
+                                ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), fmt::format("Failed to parse data: {}", historyStates[stateKey].parsingError).c_str());
+                            }
+
+                            ImGui::PopID();
+                            ImGui::TreePop();
+                        }
+                        else if(historyStates.count(stateKey) > 0 && historyStates[stateKey].parsingError.empty()) {
+                            historyStates.erase(stateKey);
+                        }
+                    }
+                }
+                ImGui::EndChild();
+            }
 
             if(title->Is(TitleType::BARONY)) {
 

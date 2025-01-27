@@ -297,7 +297,7 @@ void Mod::Load() {
 }
 
 void Mod::LoadDefaultMapFile() {
-    Parser::Node result = Parser::Parse(m_Dir + "/map_data/default.map");
+    Parser::Node result = Parser::ParseFile(m_Dir + "/map_data/default.map");
 
     // TODO: Coastal provinces??
     
@@ -449,7 +449,7 @@ void Mod::LoadProvincesDefinition() {
 }
 
 void Mod::LoadProvincesTerrain() {
-    Parser::Node result = Parser::Parse(m_Dir + "/common/province_terrain/00_province_terrain.txt");
+    Parser::Node result = Parser::ParseFile(m_Dir + "/common/province_terrain/00_province_terrain.txt");
 
     m_DefaultLandTerrain = TerrainTypefromString(result.Get("default_land", std::string("plains")));
     m_DefaultSeaTerrain = TerrainTypefromString(result.Get("default_sea", std::string("sea")));
@@ -498,7 +498,7 @@ void Mod::LoadProvincesHistory() {
     std::set<std::string> filesPath = File::ListFiles(m_Dir + "/history/provinces/");
 
     for(const auto& filePath : filesPath) {
-        Parser::Node data = Parser::Parse(filePath);
+        Parser::Node data = Parser::ParseFile(filePath);
         
         for(auto& [key, pair] : data.GetEntries()) {
             if(!std::holds_alternative<double>(key))
@@ -526,7 +526,29 @@ void Mod::LoadProvincesHistory() {
 }
 
 void Mod::LoadTitlesHistory() {
+    std::set<std::string> filesPath = File::ListFiles(m_Dir + "/history/titles/");
 
+    for(const auto& filePath : filesPath) {
+        Parser::Node data = Parser::ParseFile(filePath);
+        
+        // 1. Loop over titles key in the file.
+        for(auto& [k, pair] : data.GetEntries()) {
+            if(!std::holds_alternative<std::string>(k))
+                continue;
+            auto& [op, value] = pair;
+            std::string key = std::get<std::string>(k);
+
+            // 2. Loop over dates in the title history.
+            for(auto& [k2, pair2] : value.GetEntries()) {
+                if(!std::holds_alternative<Date>(k2))
+                    continue;
+                auto& [op2, history] = pair2;
+                std::string date = std::get<Date>(k2);
+
+                m_Titles[key]->AddHistory(date, history);
+            }
+        }
+    }
 }
 
 void Mod::LoadTitles() {
@@ -537,7 +559,7 @@ void Mod::LoadTitles() {
 
     for(const auto& filePath : filesPath) {
         // fmt::println("loading titles from {}", filePath);
-        Parser::Node data = Parser::Parse(filePath);
+        Parser::Node data = Parser::ParseFile(filePath);
         std::vector<SharedPtr<Title>> titles = ParseTitles(filePath, data);
     }
 
@@ -645,7 +667,7 @@ void Mod::Export() {
 void Mod::ExportDefaultMapFile() {
     // Read the file and keep all values except for the terrain flags
     // such as: sea_zones, impassable_seas, lakes, impassable_mountains, river_provinces
-    Parser::Node data = Parser::Parse(m_Dir + "/map_data/default.map");
+    Parser::Node data = Parser::ParseFile(m_Dir + "/map_data/default.map");
 
     data.Put("sea_zones", Parser::Node(std::vector<double>()));
     data.Put("impassable_seas", Parser::Node(std::vector<double>()));

@@ -10,6 +10,7 @@
 #include <functional>
 #include <random>
 #include <algorithm>
+#include <ranges>
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>

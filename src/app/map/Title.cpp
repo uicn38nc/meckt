@@ -76,6 +76,19 @@ void Title::SetOriginalData(const Parser::Node& data) {
     m_OriginalData = MakeShared<Parser::Node>(data);
 }
 
+std::map<Date, SharedPtr<Parser::Node>>& Title::GetHistory() {
+    return m_History;
+}
+
+void Title::AddHistory(Date date, Parser::Node data) {
+    m_History[date] = MakeShared<Parser::Node>(data);
+    m_History[date]->SetDepth(0);
+}
+
+void Title::RemoveHistory(Date date) {
+    m_History.erase(date);
+}
+
 bool Title::HasSelectionFocus() const {
     return m_SelectionFocus;
 }
