@@ -56,7 +56,7 @@ public:
             throw std::runtime_error("failed to load music file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
     
     template<typename ...Args>
@@ -67,7 +67,7 @@ public:
             throw std::runtime_error("failed to load music file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
 
     sf::Music& Get(const I& id) const {
@@ -97,7 +97,7 @@ public:
             throw std::runtime_error("failed to load shader file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
 
     sf::Shader& Get(const I& id) const {
