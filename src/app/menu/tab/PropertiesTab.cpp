@@ -199,6 +199,31 @@ void PropertiesTab::RenderTitles() {
             if(ImGui::CollapsingHeader("history")) {
                 if(ImGui::BeginChild((title->GetName() + "-history").c_str(), ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
 
+                    static std::string date = "";
+                    static bool isDateValid = true;
+
+                    const auto& AddNewDate = [&]() {
+                        try {
+                            Date newDate = Date(date);
+                            title->AddHistory(newDate, Parser::Node());
+                            isDateValid = true;
+                        }
+                        catch(std::exception& e) {
+                            isDateValid = false;
+                        }
+                    };
+
+                    if(ImGui::InputText("##date", &date, ImGuiInputTextFlags_EnterReturnsTrue)) {
+                        AddNewDate();
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("add")) {
+                        AddNewDate();
+                    }
+                    if(!isDateValid)
+                        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "Invalid date format");
+            
+
                     // TODO: improve this to avoid "memory leaks" when switching titles or even tabs.
 
                     // Each date has its own data/history and each title can have
