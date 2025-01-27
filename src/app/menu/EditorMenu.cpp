@@ -447,10 +447,8 @@ void EditorMenu::RenderMenuBar() {
 
     if(ImGui::BeginMainMenuBar()) {
         if(ImGui::BeginMenu("File")) {
-            if(ImGui::MenuItem("Save", "Ctrl+S")) {}
             if(ImGui::MenuItem("Export")) {
-                SharedPtr<Mod> mod = m_App->GetMod();
-                mod->Export();
+                m_ModalName = "Export";
             }
             if(ImGui::MenuItem("Close")) {
                 m_ExitToMainMenu = true;
@@ -711,6 +709,30 @@ void EditorMenu::RenderModals() {
         if(ImGui::Button("Generate", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
             m_App->GetMod()->GenerateMissingProvinces();
+        }
+
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    // GENERATE PROVINCES: modal end
+    
+    // EXPORT : modal begin
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if(ImGui::BeginPopupModal("Export", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "WARNING!");
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "The mod files will be completely overwritten.");
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "Comments will be lost and the overall structure may be different (indentation, style, order).");
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "This action cannot be undone, so make sure to back-up your files.");
+        ImGui::Separator();
+
+        if(ImGui::Button("Export", ImVec2(120, 0))) {
+            SharedPtr<Mod> mod = m_App->GetMod();
+            mod->Export();
+            ImGui::CloseCurrentPopup();
         }
 
         ImGui::SetItemDefaultFocus();
