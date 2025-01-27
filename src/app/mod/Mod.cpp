@@ -538,6 +538,13 @@ void Mod::LoadTitlesHistory() {
             auto& [op, value] = pair;
             std::string key = std::get<std::string>(k);
 
+            if(m_Titles.count(key) == 0) {
+                WARNING("Undefined title {} found in {}", key, filePath);
+                continue;
+            }
+
+            m_Titles[key]->SetOriginalHistoryFilePath(filePath);
+
             // 2. Loop over dates in the title history.
             for(auto& [k2, pair2] : value.GetEntries()) {
                 if(!std::holds_alternative<Date>(k2))
@@ -662,6 +669,7 @@ void Mod::Export() {
     this->ExportProvincesHistory();
 
     this->ExportTitles();
+    this->ExportTitlesHistory();
 }
 
 void Mod::ExportDefaultMapFile() {
@@ -803,6 +811,7 @@ void Mod::ExportProvincesHistory() {
 
 void Mod::ExportTitles() {
     std::string dir = m_Dir + "/common/landed_titles";
+    std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
 
     std::map<std::string, std::ofstream> files;
@@ -818,6 +827,52 @@ void Mod::ExportTitles() {
         std::ofstream& file = files[filePath];
         Parser::Node data = this->ExportTitle(title, 1);
         fmt::println(file, "{} = {}", title->GetName(), data);
+    }
+
+    for(auto& [key, file] : files)
+        file.close();
+}
+
+void Mod::ExportTitlesHistory() {
+    std::string dir = m_Dir + "/history/titles";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+
+    std::map<std::string, std::ofstream> files;
+
+    // 1. Use original history file if the title has one.
+    // 2. Use empire_titles.txt for empire tier titles.
+    // 3. Use kingdom tier liege for other titles (i.e k_the_wall).
+    // 4. Use "landless_titles.txt" for landless titles.
+    // 5. Use "special_titles.txt" for everything else.
+    const std::function<std::string(SharedPtr<Title>)> GetTitleFileName = [&](SharedPtr<Title> liege) {
+        if(liege->Is(TitleType::EMPIRE))
+            return std::string("empire_titles");
+        if(liege->Is(TitleType::KINGDOM))
+            return liege->GetName();
+        if(liege->IsLandless()) 
+            return std::string("landless_titles");
+        if(liege->GetLiegeTitle() == nullptr)
+            return std::string("special_titles");
+        return GetTitleFileName(liege->GetLiegeTitle());
+    };
+
+    for(const auto& [name, title] : m_Titles) {
+        if(title->GetHistory().size() == 0)
+            continue;
+        std::string filePath = title->GetOriginalHistoryFilePath();
+        if(filePath.empty())
+            filePath = dir + "/" + GetTitleFileName(title) + ".txt";
+        if(files.count(filePath) == 0)
+            files[filePath] = std::ofstream(filePath, std::ios::out);
+        std::ofstream& file = files[filePath];
+        
+        Parser::Node history = Parser::Node();
+        for(auto const& [date, data] : title->GetHistory()) {
+            history.Put(date, *data);
+        }
+        history.SetDepth(1);
+        fmt::println(file, "{} = {}", title->GetName(), history);
     }
 
     for(auto& [key, file] : files)

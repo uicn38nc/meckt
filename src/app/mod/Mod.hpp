@@ -40,6 +40,7 @@ public:
     void ExportProvincesTerrain();
     void ExportProvincesHistory();
     void ExportTitles();
+    void ExportTitlesHistory();
 
     Parser::Node ExportTitle(const SharedPtr<Title>& title, int depth);
 

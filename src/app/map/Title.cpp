@@ -76,6 +76,14 @@ void Title::SetOriginalData(const Parser::Node& data) {
     m_OriginalData = MakeShared<Parser::Node>(data);
 }
 
+std::string Title::GetOriginalHistoryFilePath() const {
+    return m_OriginalHistoryFilePath;
+}
+
+void Title::SetOriginalHistoryFilePath(const std::string& filePath) {
+    m_OriginalHistoryFilePath = filePath;
+}
+
 std::map<Date, SharedPtr<Parser::Node>>& Title::GetHistory() {
     return m_History;
 }

@@ -30,6 +30,8 @@ public:
     void SetOriginalFilePath(const std::string& filePath);
     void SetOriginalData(const Parser::Node& data);
 
+    std::string GetOriginalHistoryFilePath() const;
+    void SetOriginalHistoryFilePath(const std::string& filePath);
     std::map<Date, SharedPtr<Parser::Node>>& GetHistory();
     void AddHistory(Date date, Parser::Node data);
     void RemoveHistory(Date date);
@@ -48,6 +50,7 @@ protected:
     std::string m_OriginalFilePath;
     SharedPtr<Parser::Node> m_OriginalData;
 
+    std::string m_OriginalHistoryFilePath;
     std::map<Date, SharedPtr<Parser::Node>> m_History;
 
     bool m_SelectionFocus;
