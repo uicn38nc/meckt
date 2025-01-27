@@ -453,6 +453,9 @@ void EditorMenu::RenderMenuBar() {
             if(ImGui::MenuItem("Close")) {
                 m_ExitToMainMenu = true;
             }
+            if(ImGui::MenuItem("Exit")) {
+                m_ModalName = "Exit";
+            }
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("View")) {
@@ -733,6 +736,26 @@ void EditorMenu::RenderModals() {
             SharedPtr<Mod> mod = m_App->GetMod();
             mod->Export();
             ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    // GENERATE PROVINCES: modal end
+    
+    // Exit : modal begin
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if(ImGui::BeginPopupModal("Exit", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "All progress will be lost.");
+        ImGui::Separator();
+
+        if(ImGui::Button("Confirm", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+            m_App->GetWindow().close();
         }
 
         ImGui::SetItemDefaultFocus();
