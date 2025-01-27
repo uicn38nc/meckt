@@ -397,11 +397,19 @@ SharedPtr<AbstractValueHolder> LeafHolder::Copy() const {
 
 void LeafHolder::SetDepth(uint depth) {}
 
-Node Parser::Parse(const std::string& filePath) {
+Node Parser::ParseFile(const std::string& filePath) {
     std::ifstream file(filePath);
     std::string content = File::ReadString(file);
     file.close();
+    return Parse(content);
+}
 
+Node Parser::ParseFile(std::ifstream& file) {
+    std::string content = File::ReadString(file);
+    return Parse(content);
+}
+
+Node Parser::Parse(const std::string& content) {
     std::deque<PToken> tokens = Parser::Lex(content);
     Node node = Parse(tokens);
     node.SetDepth(0);

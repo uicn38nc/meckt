@@ -134,6 +134,8 @@ namespace Parser {
     };
 
 
+    Node ParseFile(const std::string& filePath);
+    Node ParseFile(std::ifstream& file);
     Node Parse(const std::string& content);
     Node Parse(std::deque<PToken>& tokens, uint depth = 0);
 
