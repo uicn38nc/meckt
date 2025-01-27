@@ -2,8 +2,8 @@
 - Fix wrong title texture send to shader after unwrapping/wrapping titles
 
 # Features
-- Add way to focus camera on province or title on map
-- Add history for titles
+- Change provinces.png pixels to new provinces color when exporting
+- Add culture and faith map modes
 - Add button to open .txt file of title / province
 - Add button to change a province sea-zone for port
 - Add button to fix provinces ids if they are not sequential
