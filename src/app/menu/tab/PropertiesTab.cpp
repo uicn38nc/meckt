@@ -289,77 +289,80 @@ void PropertiesTab::RenderTitles() {
                 const SharedPtr<HighTitle>& highTitle = CastSharedPtr<HighTitle>(title);
 
                 // HIGHTITLE: dejure titles (list)
-                ImGui::BeginChild("dejure titles", ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY | ImGuiChildFlags_Border, ImGuiWindowFlags_None);
+                ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+                if(ImGui::CollapsingHeader("dejure titles")) {
+                    ImGui::BeginChild("dejure titles", ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY | ImGuiChildFlags_Border, ImGuiWindowFlags_None);
 
-                if(ImGui::BeginMenuBar()) {
-                    if(ImGui::BeginMenu("dejure titles")) {
-                        ImGui::EndMenu();
-                    }
-                    ImGui::EndMenuBar();
-                }
-
-                // Make a copy to be able to use highTitle->RemoveDejureTitle
-                // without causing a crash while iterating.
-                std::vector<SharedPtr<Title>> dejureTitles = highTitle->GetDejureTitles();
-                int n = 0;
-                for(auto const& dejure : dejureTitles) {
-                    ImGui::PushID(dejure->GetName().c_str());
-                    ImGui::SetNextItemAllowOverlap();
-                    ImGui::Selectable(dejure->GetName().c_str());
-
-                    // Switch to the properties of the dejure title if not dragging the mouse.
-                    if(ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0)) {
-                        m_Menu->SwitchMapMode(TitleTypeToMapMode(dejure->GetType()), true);
-                        m_Menu->GetSelectionHandler().Select(dejure);
-                    }
-
-                    // Reorder the dejure titles by dragging the mouse.
-                    else if(ImGui::IsItemActive() && !ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped)) {
-                        int nNext = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
-                        if(nNext >= 0 && nNext < dejureTitles.size()) {
-                            std::iter_swap(highTitle->GetDejureTitles().begin() + n, highTitle->GetDejureTitles().begin() + nNext);
-                            ImGui::ResetMouseDragDelta();
+                    if(ImGui::BeginMenuBar()) {
+                        if(ImGui::BeginMenu("dejure titles")) {
+                            ImGui::EndMenu();
                         }
+                        ImGui::EndMenuBar();
                     }
 
-                    // First barony of a county is the capital.
-                    if(dejure == highTitle->GetCapitalTitle() || (highTitle->Is(TitleType::COUNTY) && n == 0)) {
-                        ImGui::SameLine(ImGui::GetWindowContentRegionMax().x-90);
-                        ImGui::TextColored(ImVec4(1.f, 0.6f, 0.f, 1.f), "(Capital)");
-                    }
-                    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x-20);
-                    if(ImGui::SmallButton("x")) {
-                        highTitle->RemoveDejureTitle(dejure);
+                    // Make a copy to be able to use highTitle->RemoveDejureTitle
+                    // without causing a crash while iterating.
+                    std::vector<SharedPtr<Title>> dejureTitles = highTitle->GetDejureTitles();
+                    int n = 0;
+                    for(auto const& dejure : dejureTitles) {
+                        ImGui::PushID(dejure->GetName().c_str());
+                        ImGui::SetNextItemAllowOverlap();
+                        ImGui::Selectable(dejure->GetName().c_str());
 
-                        // Update the map to remove the dejure title from the title color.
-                        // TODO: it would be better not having to redraw the entire map
-                        // but only the relevant colors.
-                        m_Menu->RefreshMapMode();
-                    }
-                    ImGui::PopID();
-                    n++;
-                }
-
-                // HIGHTITLE: add new dejure title (button)
-                ImGui::NewLine();
-                if(ImGui::SmallButton((m_SelectingTitle) ? "click on a title..." : "add") && !m_SelectingTitle) {
-                    TitleType dejureType = (TitleType)(((int) highTitle->GetType())-1);
-                    m_SelectingTitle = true;
-                    m_Menu->SwitchMapMode(TitleTypeToMapMode(dejureType), false);
-                    m_Menu->GetSelectionHandler().AddCallback(
-                        [this, highTitle, dejureType](sf::Mouse::Button button, SharedPtr<Province> province, SharedPtr<Title> clickedTitle) {
-                            if(button != sf::Mouse::Button::Left)
-                                return SelectionCallbackResult::INTERRUPT;
-                            if(!clickedTitle->Is(dejureType))
-                                return SelectionCallbackResult::INTERRUPT;
-                            highTitle->AddDejureTitle(clickedTitle);
-                            m_Menu->SwitchMapMode(TitleTypeToMapMode(highTitle->GetType()), false);
-                            m_SelectingTitle = false;
-                            return SelectionCallbackResult::INTERRUPT | SelectionCallbackResult::DELETE_CALLBACK;
+                        // Switch to the properties of the dejure title if not dragging the mouse.
+                        if(ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0)) {
+                            m_Menu->SwitchMapMode(TitleTypeToMapMode(dejure->GetType()), true);
+                            m_Menu->GetSelectionHandler().Select(dejure);
                         }
-                    );
+
+                        // Reorder the dejure titles by dragging the mouse.
+                        else if(ImGui::IsItemActive() && !ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped)) {
+                            int nNext = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
+                            if(nNext >= 0 && nNext < dejureTitles.size()) {
+                                std::iter_swap(highTitle->GetDejureTitles().begin() + n, highTitle->GetDejureTitles().begin() + nNext);
+                                ImGui::ResetMouseDragDelta();
+                            }
+                        }
+
+                        // First barony of a county is the capital.
+                        if(dejure == highTitle->GetCapitalTitle() || (highTitle->Is(TitleType::COUNTY) && n == 0)) {
+                            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x-90);
+                            ImGui::TextColored(ImVec4(1.f, 0.6f, 0.f, 1.f), "(Capital)");
+                        }
+                        ImGui::SameLine(ImGui::GetWindowContentRegionMax().x-20);
+                        if(ImGui::SmallButton("x")) {
+                            highTitle->RemoveDejureTitle(dejure);
+
+                            // Update the map to remove the dejure title from the title color.
+                            // TODO: it would be better not having to redraw the entire map
+                            // but only the relevant colors.
+                            m_Menu->RefreshMapMode();
+                        }
+                        ImGui::PopID();
+                        n++;
+                    }
+
+                    // HIGHTITLE: add new dejure title (button)
+                    ImGui::NewLine();
+                    if(ImGui::SmallButton((m_SelectingTitle) ? "click on a title..." : "add") && !m_SelectingTitle) {
+                        TitleType dejureType = (TitleType)(((int) highTitle->GetType())-1);
+                        m_SelectingTitle = true;
+                        m_Menu->SwitchMapMode(TitleTypeToMapMode(dejureType), false);
+                        m_Menu->GetSelectionHandler().AddCallback(
+                            [this, highTitle, dejureType](sf::Mouse::Button button, SharedPtr<Province> province, SharedPtr<Title> clickedTitle) {
+                                if(button != sf::Mouse::Button::Left)
+                                    return SelectionCallbackResult::INTERRUPT;
+                                if(!clickedTitle->Is(dejureType))
+                                    return SelectionCallbackResult::INTERRUPT;
+                                highTitle->AddDejureTitle(clickedTitle);
+                                m_Menu->SwitchMapMode(TitleTypeToMapMode(highTitle->GetType()), false);
+                                m_SelectingTitle = false;
+                                return SelectionCallbackResult::INTERRUPT | SelectionCallbackResult::DELETE_CALLBACK;
+                            }
+                        );
+                    }
+                    ImGui::EndChild();
                 }
-                ImGui::EndChild();
 
                 if(!title->Is(TitleType::COUNTY)) {
                     const SharedPtr<HighTitle>& highTitle = CastSharedPtr<HighTitle>(title);
