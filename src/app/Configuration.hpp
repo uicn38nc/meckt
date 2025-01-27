@@ -22,7 +22,7 @@ public:
     Configuration(const Configuration&) = delete;
     Configuration& operator=(const Configuration&) = delete;
 
-    //Graphics
+    //Settings
     inline static sf::Vector2u windowResolution = {800, 600};
     
     // Resources

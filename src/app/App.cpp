@@ -25,6 +25,7 @@ void App::OpenMenu(UniquePtr<Menu> menu) {
 
 void App::OpenMod(SharedPtr<Mod> mod) {
     m_ActiveMod = mod;
+    Logger::Get()->Clear();
     mod->Load();
     this->OpenMenu(MakeUnique<EditorMenu>(this));
 }
@@ -50,6 +51,11 @@ void App::Init() {
 
     ImGui::SetupSettings();
     ImGui::SetupStyle();
+
+#ifdef DEBUG
+    INFO("DEBUG_MODE is enabled", "");
+    this->DebugSettings();
+#endif
 }
 
 void App::Run() {
@@ -98,11 +104,13 @@ void App::Run() {
 
         // Drawing.
         m_Window.clear();
+        
+#ifdef DEBUG
         ImGui::ShowDemoWindow();
+#endif
         m_ActiveMenu->Render();
 
         ImGui::SFML::Render(m_Window);
-
         m_Window.display();
     }
 
