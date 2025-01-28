@@ -338,7 +338,7 @@
 #include <thread>
 
 #include <basetsd.h>
-typedef SSIZE_T ssize_t;
+// typedef SSIZE_T ssize_t;
 
 #ifndef NOMINMAX
 #define NOMINMAX

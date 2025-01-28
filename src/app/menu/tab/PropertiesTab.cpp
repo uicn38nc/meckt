@@ -279,7 +279,7 @@ void PropertiesTab::RenderTitles() {
                 const SharedPtr<BaronyTitle>& barony = CastSharedPtr<BaronyTitle>(title);
                 if(ImGui::InputInt("province id", &barony->m_ProvinceId)) {
                     if(m_Menu->GetApp()->GetMod()->GetProvincesByIds().count(barony->m_ProvinceId) == 0) {
-                        ERROR("Barony with undefined province id: {},{}", barony->GetName(), barony->GetProvinceId());
+                        LOG_ERROR("Barony with undefined province id: {},{}", barony->GetName(), barony->GetProvinceId());
                     }
                 }
 

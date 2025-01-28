@@ -10,22 +10,22 @@ public:
     void Load(const I& id, const std::string& path) {
         std::unique_ptr<R> ptr(new R());
         if(!ptr->loadFromFile(path)) {
-            ERROR("Failed to load resource {} {} from file {}", m_Name, (int) id, path);
+            LOG_ERROR("Failed to load resource {} {} from file {}", m_Name, (int) id, path);
             throw std::runtime_error("failed to load resource file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // LOG_INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
     
     template <typename ...Args>
     void Load(const I& id, const std::string& path, Args&& ...args) {
         std::unique_ptr<R> ptr(new R());
         if(!ptr->loadFromFile(path, std::forward<Args>(args)...)) {
-            ERROR("Failed to load resource {} {} from file {}", m_Name, (int) id, path);
+            LOG_ERROR("Failed to load resource {} {} from file {}", m_Name, (int) id, path);
             throw std::runtime_error("failed to load resource file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // LOG_INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
 
     R& Get(const I& id) const {
@@ -52,22 +52,22 @@ public:
     void Load(const I& id, const std::string& path) {
         std::unique_ptr<sf::Music> ptr(new sf::Music());
         if(!ptr->openFromFile(path)) {
-            ERROR("Failed to load music {} from file {}", (int) id, path);
+            LOG_ERROR("Failed to load music {} from file {}", (int) id, path);
             throw std::runtime_error("failed to load music file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // LOG_INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
     
     template<typename ...Args>
     void Load(const I& id, const std::string& path, Args&& ...args) {
         std::unique_ptr<sf::Music> ptr(new sf::Music());
         if(!ptr->openFromFile(path, std::forward<Args>(args)...)) {
-            ERROR("Failed to load music {} from file {}", (int) id, path);
+            LOG_ERROR("Failed to load music {} from file {}", (int) id, path);
             throw std::runtime_error("failed to load music file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // LOG_INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
 
     sf::Music& Get(const I& id) const {
@@ -93,11 +93,11 @@ public:
     void Load(const I& id, const std::string& path, Args&& ...args) {
         std::unique_ptr<sf::Shader> ptr(new sf::Shader());
         if(!ptr->loadFromFile(path, std::forward<Args>(args)...)) {
-            ERROR("Failed to load shader {} from file {}", (int) id, path);
+            LOG_ERROR("Failed to load shader {} from file {}", (int) id, path);
             throw std::runtime_error("failed to load shader file.");
         }
         m_Resources.emplace(id, std::move(ptr));
-        // INFO("loaded {} {} from {}", m_Name, (int) id, path);
+        // LOG_INFO("loaded {} {} from {}", m_Name, (int) id, path);
     }
 
     sf::Shader& Get(const I& id) const {

@@ -201,7 +201,7 @@ public:
   }
   bool loaded() const { return true; }
 
-  ~SignalHandling() {
+  ~SignalHandler() {
     {
       std::unique_lock<std::mutex> lk(mtx());
       crashed() = crash_status::normal_exit;

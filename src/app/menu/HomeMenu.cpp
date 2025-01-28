@@ -52,16 +52,16 @@ void HomeMenu::Render() {
             SharedPtr<Mod> mod = MakeShared<Mod>(std::string(dirPath));
             if(mod->HasMap()) {
                 m_App->OpenMod(mod);
-                INFO("Opened mod at {}", dirPath);
+                LOG_INFO("Opened mod at {}", dirPath);
             }
             else {
-                INFO("Opened mod without custom map at {}", dirPath);
+                LOG_INFO("Opened mod without custom map at {}", dirPath);
                 error = fmt::format("This mod does not have a custom map.");
             }
             free(dirPath);
         }
         else if(result != NFD_CANCEL) {
-            ERROR("Failed to open mod at {}", NFD_GetError());
+            LOG_ERROR("Failed to open mod at {}", NFD_GetError());
             error = fmt::format("Failed to open mod ({})", NFD_GetError());
         }
     }

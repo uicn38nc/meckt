@@ -278,13 +278,13 @@ void Mod::Load() {
         return;
 
     if(!m_HeightmapImage.loadFromFile(m_Dir + "/map_data/heightmap.png")) {
-        ERROR("Failed to load heightmap image at ", m_Dir + "/map_data/heightmap.png");
+        LOG_ERROR("Failed to load heightmap image at ", m_Dir + "/map_data/heightmap.png");
     }
     if(!m_ProvinceImage.loadFromFile(m_Dir + "/map_data/provinces.png")) {
         FATAL("Failed to load provinces image at ", m_Dir + "/map_data/provinces.png");
     }
     if(!m_RiversImage.loadFromFile(m_Dir + "/map_data/rivers.png")) {
-        ERROR("Failed to load rivers image at ", m_Dir + "/map_data/rivers.png");
+        LOG_ERROR("Failed to load rivers image at ", m_Dir + "/map_data/rivers.png");
     }
 
     this->LoadProvincesDefinition();
@@ -376,7 +376,7 @@ void Mod::LoadProvinceImage() {
 
                 if((color & 0xFF) != 0xFF) {
                     sf::Vector2i pos = GetIndexPosition(index);
-                    ERROR("Transparent pixel in province image at coordinates ({},{})", pos.x, pos.y);
+                    LOG_ERROR("Transparent pixel in province image at coordinates ({},{})", pos.x, pos.y);
                     continue;
                 }
 
@@ -391,7 +391,7 @@ void Mod::LoadProvinceImage() {
                 }
 
                 if(!alreadySeen && !hasProvince) {
-                    ERROR("Color found in image but missing province from definition.csv: ({},{},{})", pixels[index], pixels[index+1], pixels[index+2]);
+                    LOG_ERROR("Color found in image but missing province from definition.csv: ({},{},{})", pixels[index], pixels[index+1], pixels[index+2]);
                     continue;
                 }
 
@@ -436,11 +436,11 @@ void Mod::LoadProvincesDefinition() {
         SharedPtr<Province> province = MakeShared<Province>(id, sf::Color(r, g, b), name);
 
         if(m_ProvincesByIds.count(id) > 0)
-            ERROR("Several provinces with same id: {}", id);
+            LOG_ERROR("Several provinces with same id: {}", id);
         if(m_Provinces.count(province->GetColorId()) > 0)
-            ERROR("Several provinces with same color: {},{}", id, m_Provinces.at(province->GetColorId())->GetId());
+            LOG_ERROR("Several provinces with same color: {},{}", id, m_Provinces.at(province->GetColorId())->GetId());
         if(id != lastId+1)
-            ERROR("Ids in definitions.csv are not sequential: {} to {}", lastId, id);
+            LOG_ERROR("Ids in definitions.csv are not sequential: {} to {}", lastId, id);
 
         m_Provinces[province->GetColorId()] = province;
         m_ProvincesByIds[province->GetId()] = province;
@@ -476,14 +476,14 @@ void Mod::LoadProvincesTerrain() {
         if(!value.Is(Parser::ValueType::STRING)) {
             std::vector<std::string> values = value;
             terrain = TerrainTypefromString(values[0]);
-            WARNING("Province assigned several terrain types: {}", provinceId);
+            LOG_WARNING("Province assigned several terrain types: {}", provinceId);
         }
         else {
             terrain = TerrainTypefromString(value);
         }
 
         if(m_ProvincesByIds.count(provinceId) == 0) {
-            WARNING("Terrain type assigned to undefined province: {}", provinceId);
+            LOG_WARNING("Terrain type assigned to undefined province: {}", provinceId);
             continue;
         }
 
@@ -539,7 +539,7 @@ void Mod::LoadTitlesHistory() {
             std::string key = std::get<std::string>(k);
 
             if(m_Titles.count(key) == 0) {
-                WARNING("Undefined title {} found in {}", key, filePath);
+                LOG_WARNING("Undefined title {} found in {}", key, filePath);
                 continue;
             }
 
@@ -570,10 +570,10 @@ void Mod::LoadTitles() {
         std::vector<SharedPtr<Title>> titles = ParseTitles(filePath, data);
     }
 
-    INFO("loaded {} titles from {} files", m_Titles.size(), filesPath.size());
+    LOG_INFO("loaded {} titles from {} files", m_Titles.size(), filesPath.size());
     
     for(int i = 0; i < (int) TitleType::COUNT; i++)
-        INFO("loaded {} {} titles", m_TitlesByType[(TitleType) i].size(), TitleTypeLabels[i]);
+        LOG_INFO("loaded {} {} titles", m_TitlesByType[(TitleType) i].size(), TitleTypeLabels[i]);
 }
 
 std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Parser::Node& data) {
@@ -601,16 +601,16 @@ std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Pars
             SharedPtr<Title> title = MakeTitle(type, key, color, landless);
 
             if(!value.ContainsKey("color"))
-                WARNING("Title missing color in definition: {}", key);
+                LOG_WARNING("Title missing color in definition: {}", key);
 
             if(type == TitleType::BARONY) {
                 SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
                 baronyTitle->SetProvinceId(value.Get("province", 0));
                 
                 if(!value.ContainsKey("province"))
-                    ERROR("Barony title missing province id in definition: {}", key);
+                    LOG_ERROR("Barony title missing province id in definition: {}", key);
                 if(m_ProvincesByIds.count(baronyTitle->GetProvinceId()) == 0)
-                    ERROR("Barony title with undefined province id in definition: {},{}", key, baronyTitle->GetProvinceId());
+                    LOG_ERROR("Barony title with undefined province id in definition: {},{}", key, baronyTitle->GetProvinceId());
 
                 value.Remove("province");
             }
@@ -619,9 +619,9 @@ std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Pars
                 std::vector<SharedPtr<Title>> dejureTitles = ParseTitles(filePath, value);
 
                 if(landless && !dejureTitles.empty())
-                    WARNING("Landless title has dejure vassals in definition: {}", key);
+                    LOG_WARNING("Landless title has dejure vassals in definition: {}", key);
                 else if(!landless && dejureTitles.empty())
-                    WARNING("Title does not have any dejure vassals in definition: {}", key);
+                    LOG_WARNING("Title does not have any dejure vassals in definition: {}", key);
 
                 for(const auto& dejureTitle : dejureTitles) {
                     highTitle->AddDejureTitle(dejureTitle);
@@ -640,7 +640,7 @@ std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Pars
                         value.Remove("capital");
                     }
                     else {
-                        ERROR("Title missing county capital in definition: {}", key);
+                        LOG_ERROR("Title missing county capital in definition: {}", key);
                     }
                 }
             }
@@ -786,7 +786,7 @@ void Mod::ExportProvincesHistory() {
             continue;
         SharedPtr<Title> kingdomTitle = this->GetProvinceLiegeTitle(province, TitleType::KINGDOM);
         if(kingdomTitle == nullptr) {
-            ERROR("Province cannot be saved because missing dejure kingdom tier liege: {}", id);
+            LOG_ERROR("Province cannot be saved because missing dejure kingdom tier liege: {}", id);
             continue;
         }
         if(files.count(kingdomTitle->GetName()) == 0) {

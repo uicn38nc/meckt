@@ -45,7 +45,7 @@ void App::Init() {
     
     // Initialize ImGui.
     if(!ImGui::SFML::Init(m_Window)) {
-        ERROR("Failed to initialize ImGui for SFML.", "");
+        LOG_ERROR("Failed to initialize ImGui for SFML.", "");
         exit(EXIT_FAILURE);
     }
 
@@ -53,7 +53,7 @@ void App::Init() {
     ImGui::SetupStyle();
 
 #ifdef DEBUG
-    INFO("DEBUG_MODE is enabled", "");
+    LOG_INFO("DEBUG_MODE is enabled", "");
     this->DebugSettings();
 #endif
 }

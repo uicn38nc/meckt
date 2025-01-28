@@ -12,7 +12,7 @@
 namespace Logger {
     enum MessageType {
         FATAL,
-        ERROR,
+        ERROR_,
         WARNING,
         INFO,
     };
@@ -74,9 +74,9 @@ namespace Logger {
     }
 }
 
-#define ERROR(fmt, ...)   Logger::LogMessage(LOGS_FILE, __FILE__, __LINE__, __func__, Logger::ERROR, fmt, ##__VA_ARGS__)
-#define WARNING(fmt, ...) Logger::LogMessage(LOGS_FILE, __FILE__, __LINE__, __func__, Logger::WARNING, fmt, ##__VA_ARGS__)
-#define INFO(fmt, ...)    Logger::LogMessage(LOGS_FILE, __FILE__, __LINE__, __func__, Logger::INFO, fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...)   Logger::LogMessage(LOGS_FILE, __FILE__, __LINE__, __func__, Logger::ERROR_, fmt, ##__VA_ARGS__)
+#define LOG_WARNING(fmt, ...) Logger::LogMessage(LOGS_FILE, __FILE__, __LINE__, __func__, Logger::WARNING, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...)    Logger::LogMessage(LOGS_FILE, __FILE__, __LINE__, __func__, Logger::INFO, fmt, ##__VA_ARGS__)
 
 #define FATAL(fmt, ...) \
     Logger::LogMessage(LOGS_FILE,     __FILE__, __LINE__, __func__, Logger::FATAL, fmt, ## __VA_ARGS__); \

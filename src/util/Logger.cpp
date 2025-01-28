@@ -61,7 +61,7 @@ std::string Logger::Message::ToString() const {
 sf::Color Logger::Message::GetColor() const {
     switch(m_Type) {
         case FATAL: return sf::Color(255, 0, 0);
-        case ERROR: return sf::Color(255, 0, 0);
+        case ERROR_: return sf::Color(255, 0, 0);
         case WARNING: return sf::Color(255, 130, 0);
         case INFO: return sf::Color(0, 140, 255);
         default: return sf::Color::White;

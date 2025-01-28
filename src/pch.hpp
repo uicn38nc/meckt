@@ -12,6 +12,12 @@
 #include <algorithm>
 #include <ranges>
 
+#ifdef _WIN32
+typedef unsigned long ulong;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+#endif
+
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
