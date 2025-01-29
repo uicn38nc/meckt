@@ -3,6 +3,7 @@
 #include "parser/Lexer.hpp"
 
 #include <fmt/format.h>
+#include <fmt/compile.h>
 #include <ranges>
 
 namespace Parser {
@@ -254,7 +255,7 @@ public:
                 if(p.second.second.Is(Parser::ValueType::NUMBER_LIST))
                     return formatNumbersList(p.first, p.second.second);
                 return fmt::format(
-                    "{}{} {} {}",
+                    FMT_COMPILE("{}{} {} {}"),
                     std::string(p.second.second.GetDepth()-1, '\t'), // Indentation
                     p.first, // Key
                     fmt::format("{}", p.second.first), // Operator

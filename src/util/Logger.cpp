@@ -96,8 +96,10 @@ void Logger::Logger::PrintMessage(SharedPtr<Message> message) {
 }
 
 void Logger::Logger::Clear() {
+    m_OutputFile.close();
     std::filesystem::remove(LOGS_FILE);
     std::filesystem::remove(CRASH_FILE);
+    m_OutputFile.open(LOGS_FILE, std::ios::out);
     m_Messages.clear();
 }
 

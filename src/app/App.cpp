@@ -4,6 +4,11 @@
 #include "menu/EditorMenu.hpp"
 #include "menu/ImGuiStyle.hpp"
 
+#if _WIN32
+#include <windows.h>
+#include <winuser.h>
+#endif
+
 App::App()
 : m_ActiveMenu(MakeUnique<HomeMenu>(this)) {}
 
@@ -55,6 +60,8 @@ void App::Init() {
 #ifdef DEBUG
     LOG_INFO("DEBUG_MODE is enabled", "");
     this->DebugSettings();
+#elif _WIN32
+    ShowWindow(GetConsoleWindow(), SW_HIDE);
 #endif
 }
 

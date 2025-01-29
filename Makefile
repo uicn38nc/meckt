@@ -66,7 +66,7 @@ $(OBJ_DIR)/%.o: %.cpp $(PCH)
 
 $(BIN_DIR)/$(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
-	$(CXX) $(GTKFLAGS) $(CXXFLAGS) -o $(BIN_DIR)/$(TARGET) $^ $(LIB) $(LDFLAGS) $(GTKLIBS)
+	$(CXX) $(GTKFLAGS) $(CXXFLAGS) -o $(BIN_DIR)/$(TARGET) $^ $(LDFLAGS) $(GTKLIBS)
 
 # Make commands
 
