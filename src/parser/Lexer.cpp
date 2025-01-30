@@ -126,7 +126,13 @@ PToken Parser::ReadNumber(Reader& reader) {
             return nullptr;
     }
     std::string str = reader.End();
-    return MakeShared<Token>(TokenType::NUMBER, std::stod(str));
+    try {
+        double value = std::stod(str);
+        return MakeShared<Token>(TokenType::NUMBER, value);
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("failed to parse \"{}\" to double.\n{}", str, e.what()));
+    }
 }
 
 PToken Parser::ReadIdentifier(Reader& reader) {
