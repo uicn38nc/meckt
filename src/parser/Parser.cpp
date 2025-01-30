@@ -449,7 +449,7 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                     break;
                 }
 
-                throw std::runtime_error(fmt::format("Unexpected token while parsing key ({}).", (int) token->GetType()));
+                throw std::runtime_error(fmt::format("Unexpected token while parsing key (type={}).", (int) token->GetType()));
                 break;
 
             case OPERATOR:
@@ -463,7 +463,7 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                     op = (Operator)(((int) token->GetType()) - 3);
                     break;
                 }
-                throw std::runtime_error(fmt::format("Unexpected token while operator ({}).", (int) token->GetType()));
+                throw std::runtime_error(fmt::format("Unexpected token while operator (type={}).", (int) token->GetType()));
                 break;
                 
             case VALUE:
