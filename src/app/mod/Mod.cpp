@@ -375,7 +375,7 @@ void Mod::LoadProvinceImage() {
                 colorPtr[0] = pixels[index++]; // A
 
                 if((color & 0xFF) != 0xFF) {
-                    sf::Vector2i pos = GetIndexPosition(index);
+                    sf::Vector2i pos = GetIndexPosition(index-4);
                     LOG_ERROR("Transparent pixel in province image at coordinates ({},{})", pos.x, pos.y);
                     continue;
                 }
@@ -397,7 +397,7 @@ void Mod::LoadProvinceImage() {
 
                 if(hasProvince) {
                     if(!alreadySeen) {
-                        sf::Vector2i pos = GetIndexPosition(index);
+                        sf::Vector2i pos = GetIndexPosition(index-4);
                         province->second->SetImagePosition(pos);
                     }
                     province->second->IncrementImagePixelsCount();
