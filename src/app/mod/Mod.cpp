@@ -372,7 +372,7 @@ void Mod::LoadProvinceImage() {
                 colorPtr[3] = pixels[index++]; // R
                 colorPtr[2] = pixels[index++]; // G
                 colorPtr[1] = pixels[index++]; // B
-                index++;
+                colorPtr[0] = pixels[index++]; // A
 
                 if((color & 0xFF) != 0xFF) {
                     sf::Vector2i pos = GetIndexPosition(index);
@@ -391,7 +391,7 @@ void Mod::LoadProvinceImage() {
                 }
 
                 if(!alreadySeen && !hasProvince) {
-                    LOG_ERROR("Color found in image but missing province from definition.csv: ({},{},{})", pixels[index], pixels[index+1], pixels[index+2]);
+                    LOG_ERROR("Color found in image but missing province from definition.csv: ({},{},{},{})", pixels[index-4], pixels[index-3], pixels[index-2], pixels[index-1]);
                     continue;
                 }
 
