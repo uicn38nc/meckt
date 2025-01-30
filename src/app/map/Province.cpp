@@ -37,6 +37,7 @@ Province::Province(int id, sf::Color color, std::string name) {
     m_Flags = ProvinceFlags::NONE;
     m_Terrain = TerrainType::PLAINS;
     m_Holding = ProvinceHolding::NONE;
+    m_OriginalData = MakeShared<Parser::Node>();
     m_ImagePosition = sf::Vector2i(0, 0);
     m_ImagePixelsCount = 0;
 }

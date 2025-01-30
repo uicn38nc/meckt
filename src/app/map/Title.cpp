@@ -9,6 +9,7 @@ Title::Title(std::string name, sf::Color color, bool landless) :
     m_Name(name),
     m_Color(color),
     m_Landless(landless),
+    m_OriginalData(MakeShared<Parser::Node>()),
     m_SelectionFocus(true)
 {}
 
