@@ -51,12 +51,12 @@ sf::Image Mod::GetTitleImage(TitleType type) {
 
     uint width = m_ProvinceImage.getSize().x;
     uint height = m_ProvinceImage.getSize().y;
-    uint pixels = width * height * 4;
+    uint pixels = width * height;
 
     // Use vectors to avoid using SFML getters and setters for pixels.
     const sf::Uint8* provincesPixels = m_ProvinceImage.getPixelsPtr();
     std::vector<sf::Uint8> titlesPixels = std::vector<sf::Uint8>();
-    titlesPixels.reserve(width * height * 4);
+    titlesPixels.reserve(pixels * 4);
     // fmt::println("image=[{}, {}]\tbytes={}", width, height, titlesPixels.capacity());
     // fmt::println("initializing pixels array: {}", String::DurationFormat(clock.restart()));
 
@@ -69,8 +69,8 @@ sf::Image Mod::GetTitleImage(TitleType type) {
     for(uint i = 0; i < threadsCount; i++) {
 
         threads.push_back(MakeUnique<sf::Thread>([&, i](){
-            uint startIndex = i * threadRange;
-            uint endIndex = (i == threadsCount-1) ? pixels : (i+1) * threadRange;
+            uint startIndex = i * threadRange*4;
+            uint endIndex = (i == threadsCount-1) ? pixels*4 : (i+1) * threadRange*4;
             uint index = startIndex;
             // // fmt::println("i={}\t[{},{}]", i, startIndex, endIndex);
 
@@ -126,6 +126,8 @@ sf::Image Mod::GetTitleImage(TitleType type) {
     image.create(width, height, titlesPixels.data());
     // texture.update(titlesPixels.data());
     // fmt::println("initializing image: {}", String::DurationFormat(clock.restart()));
+
+    // image.saveToFile(std::filesystem::current_path() / "test_eazeuiazhjeaze" / std::string(std::string(TitleTypeLabels[(int) type]) + ".png"));
 
     return image;
 }
@@ -338,7 +340,7 @@ void Mod::LoadProvinceImage() {
 
     uint width = m_ProvinceImage.getSize().x;
     uint height = m_ProvinceImage.getSize().y;
-    uint totalPixels = width * height * 4;
+    uint totalPixels = width * height;
 
     const auto& GetIndexPosition = [&](uint index) {
         index = index - 4;
@@ -353,8 +355,8 @@ void Mod::LoadProvinceImage() {
     for(uint i = 0; i < threadsCount; i++) {
 
         threads.push_back(MakeUnique<sf::Thread>([&, i](){
-            uint startIndex = i * threadRange;
-            uint endIndex = (i == threadsCount-1) ? totalPixels : (i+1) * threadRange;
+            uint startIndex = i * threadRange*4;
+            uint endIndex = (i == threadsCount-1) ? totalPixels*4 : (i+1) * threadRange*4;
             uint index = startIndex;
 
             sf::Uint32 color = 0x000000FF;
