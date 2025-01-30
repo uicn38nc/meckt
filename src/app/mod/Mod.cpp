@@ -34,10 +34,6 @@ sf::Image Mod::GetTitleImage(TitleType type) {
     std::unordered_map<sf::Uint32, sf::Uint32> colors;
 
     for(const auto& [provinceColorId, province] : m_Provinces) {
-
-        if(m_Titles.count(province->GetName()) == 0)
-            continue;
-
         const SharedPtr<Title>& liege = this->GetProvinceFocusedTitle(province, type);
         // const SharedPtr<Title>& liege = GetProvinceLiegeTitle(province, type);
 
@@ -145,10 +141,10 @@ std::map<int, SharedPtr<Province>>& Mod::GetProvincesByIds() {
 }
 
 SharedPtr<Title> Mod::GetProvinceLiegeTitle(const SharedPtr<Province>& province, TitleType type) {
-    if(!m_Titles.count(province->GetName()))
+    if(m_BaroniesByProvinceIds.count(province->GetId()) == 0)
         return nullptr;
 
-    const SharedPtr<Title>& barony = m_Titles[province->GetName()];
+    const SharedPtr<Title>& barony = m_BaroniesByProvinceIds[province->GetId()];
 
     #define RETURN_IF_NULL(v) if(v == nullptr) return nullptr;
 
@@ -173,10 +169,10 @@ SharedPtr<Title> Mod::GetProvinceLiegeTitle(const SharedPtr<Province>& province,
 }
 
 SharedPtr<Title> Mod::GetProvinceFocusedTitle(const SharedPtr<Province>& province, TitleType type) {
-    if(!m_Titles.count(province->GetName()))
+    if(m_BaroniesByProvinceIds.count(province->GetId()) == 0)
         return nullptr;
 
-    SharedPtr<Title> barony = m_Titles[province->GetName()];
+    SharedPtr<Title> barony = m_BaroniesByProvinceIds[province->GetId()];
     SharedPtr<Title> title = barony;
 
     while(title->GetLiegeTitle() != nullptr && (int) title->GetType() < (int) type && title->GetLiegeTitle()->HasSelectionFocus()) {
@@ -196,6 +192,10 @@ std::map<std::string, SharedPtr<Title>>& Mod::GetTitles() {
 
 std::map<TitleType, std::vector<SharedPtr<Title>>>& Mod::GetTitlesByType() {
     return m_TitlesByType;
+}
+
+std::map<int, SharedPtr<BaronyTitle>>& Mod::GetBaroniesByProvinceIds() {
+    return m_BaroniesByProvinceIds;
 }
 
 void Mod::HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color rgb, float hue, float saturation) {
@@ -613,7 +613,12 @@ std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Pars
                     LOG_ERROR("Barony title missing province id in definition: {}", key);
                 if(m_ProvincesByIds.count(baronyTitle->GetProvinceId()) == 0)
                     LOG_ERROR("Barony title with undefined province id in definition: {},{}", key, baronyTitle->GetProvinceId());
+                if(m_BaroniesByProvinceIds.count(baronyTitle->GetProvinceId()) > 0) {
+                    LOG_ERROR("Province {} has several assigned barony titles (e.g {})", baronyTitle->GetProvinceId(), key);
+                    continue;
+                }
 
+                m_BaroniesByProvinceIds[baronyTitle->GetProvinceId()] = baronyTitle;
                 value.Remove("province");
             }
             else {

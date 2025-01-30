@@ -142,9 +142,9 @@ void PropertiesTab::RenderProvinces() {
             }
 
             // PROVINCE: switch to barony (button)
-            if(m_Menu->GetApp()->GetMod()->GetTitles().count(province->GetName()) > 0) {
+            if(m_Menu->GetApp()->GetMod()->GetBaroniesByProvinceIds().count(province->GetId()) > 0) {
                 if(ImGui::Button("switch to barony")) {
-                    const SharedPtr<Title>& title = m_Menu->GetApp()->GetMod()->GetTitles()[province->GetName()];
+                    const SharedPtr<Title>& title = m_Menu->GetApp()->GetMod()->GetBaroniesByProvinceIds()[province->GetId()];
                     m_Menu->SwitchMapMode(MapMode::BARONY, true);
                     m_Menu->GetSelectionHandler().Select(title);
                 }
@@ -293,7 +293,10 @@ void PropertiesTab::RenderTitles() {
                         [this, barony, previousMapMode](sf::Mouse::Button button, SharedPtr<Province> province) {
                             if(button != sf::Mouse::Button::Left)
                                 return SelectionCallbackResult::INTERRUPT;
+                            
                             barony->SetProvinceId(province->GetId());
+                            m_Menu->GetApp()->GetMod()->GetBaroniesByProvinceIds()[barony->GetProvinceId()] = barony;
+
                             m_Menu->SwitchMapMode(previousMapMode, false);
                             m_SelectingTitle = false;
                             return SelectionCallbackResult::INTERRUPT | SelectionCallbackResult::DELETE_CALLBACK;

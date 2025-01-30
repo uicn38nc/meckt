@@ -635,7 +635,9 @@ void EditorMenu::RenderModals() {
                 // If no province is currently selected, the default province id for the barony will be 0.
                 int provinceId = (hasSelectedProvince) ? m_SelectionHandler.GetProvinces()[0]->GetId() : 0;
                 const SharedPtr<BaronyTitle>& barony = CastSharedPtr<BaronyTitle>(title);
+
                 barony->SetProvinceId(provinceId);
+                mod->GetBaroniesByProvinceIds()[barony->GetProvinceId()] = barony;
 
                 mod->GetProvincesByIds()[provinceId]->SetName(name);
             }

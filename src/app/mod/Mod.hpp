@@ -19,6 +19,7 @@ public:
 
     std::map<std::string, SharedPtr<Title>>& GetTitles();
     std::map<TitleType, std::vector<SharedPtr<Title>>>& GetTitlesByType();
+    std::map<int, SharedPtr<BaronyTitle>>& GetBaroniesByProvinceIds();
 
     void HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color color, float hue, float saturation);
     void GenerateMissingProvinces();
@@ -55,6 +56,7 @@ private:
     
     std::map<std::string, SharedPtr<Title>> m_Titles;
     std::map<TitleType, std::vector<SharedPtr<Title>>> m_TitlesByType;
+    std::map<int, SharedPtr<BaronyTitle>> m_BaroniesByProvinceIds;
 
     TerrainType m_DefaultLandTerrain;
     TerrainType m_DefaultSeaTerrain;
