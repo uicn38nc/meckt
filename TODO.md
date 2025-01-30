@@ -2,6 +2,7 @@
 - Fix wrong title texture send to shader after unwrapping/wrapping titles
 
 # Features
+- Add Parser support for HSV colors
 - Change provinces.png pixels to new provinces color when exporting
 - Add culture and faith map modes
 - Add button to open .txt file of title / province
