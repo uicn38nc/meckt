@@ -451,7 +451,7 @@ void EditorMenu::RenderMenuBar() {
                 m_ModalName = "Export";
             }
             if(ImGui::MenuItem("Close")) {
-                m_ExitToMainMenu = true;
+                m_ModalName = "Close";
             }
             if(ImGui::MenuItem("Exit")) {
                 m_ModalName = "Exit";
@@ -749,7 +749,27 @@ void EditorMenu::RenderModals() {
     }
     // GENERATE PROVINCES: modal end
     
-    // Exit : modal begin
+    // CLOSE : modal begin
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if(ImGui::BeginPopupModal("Close", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "All progress will be lost.");
+        ImGui::Separator();
+
+        if(ImGui::Button("Confirm", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+            m_ExitToMainMenu = true;
+        }
+
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    // CLOSE: modal end
+    
+    // EXIT : modal begin
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if(ImGui::BeginPopupModal("Exit", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "All progress will be lost.");
@@ -767,5 +787,5 @@ void EditorMenu::RenderModals() {
         }
         ImGui::EndPopup();
     }
-    // GENERATE PROVINCES: modal end
+    // EXIT: modal end
 }
