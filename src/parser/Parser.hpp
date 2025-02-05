@@ -292,7 +292,7 @@ public:
 
             // Push a new line if a streak is broken or if it is the last element of the vector.
             if(!isFollowingStreak) {
-                if(n > 2) {
+                if(n > 3) {
                     lines.push_back(fmt::format("RANGE {{ {}  {} }}", l[start], l[current-1]));
                 }
                 else {
