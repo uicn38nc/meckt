@@ -2,8 +2,9 @@
 /bin/
 /obj/
 /logs/
-/test_mod*/
+/test_*/
 /tmp/
 /vendor/sfml/
 *.txt
 imgui.ini
+*.zip
