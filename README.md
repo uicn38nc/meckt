@@ -8,7 +8,7 @@ Meckt is a tool whose goal is making total conversion mod easier and less cumber
 
 > **Warning:**  
 > Please use this tool with caution. Exporting modifications will impact significantly the structure and content of your files.  
-> Always ensure you have a **backup of your files before exporting** to prevent any unintended changes or data loss.  
+> Always ensure you have a **backup of your mod files before exporting** to prevent any unintended changes or data loss.  
 
 ## Overview
 
@@ -36,7 +36,7 @@ Contributions to the project are highly appreciated! There are several ways to g
 - **Dear ImGui** (https://github.com/ocornut/imgui/)
 - **ImGui-SFML** (https://github.com/SFML/imgui-sfml)
 - **Backward-cpp** (https://github.com/bombela/backward-cpp)
-- **{fmt}** (https://github.com/bombela/backward-cpp)
+- **{fmt}** (https://fmt.dev/)
 - **Native File Dialog** (https://github.com/mlabbe/nativefiledialog)
 
 ## License
