@@ -147,6 +147,7 @@ void EditorMenu::UpdateTexture(MapMode mode, bool resetFocus) {
             m_MapTextures[mode].loadFromImage(mod->GetRiversImage());
             break;
         case MapMode::CULTURE:
+            m_MapTextures[mode].loadFromImage(mod->GetCultureImage());
             break;
         case MapMode::RELIGION:
             break;

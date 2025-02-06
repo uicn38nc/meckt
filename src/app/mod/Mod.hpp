@@ -8,6 +8,7 @@ public:
     sf::Image& GetHeightmapImage();
     sf::Image& GetProvinceImage();
     sf::Image& GetRiversImage();
+    sf::Image GetCultureImage();
     sf::Image GetTitleImage(TitleType type);
     bool HasMap() const;
 

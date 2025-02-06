@@ -30,6 +30,7 @@ typedef unsigned int uint;
 #include "util/Color.hpp"
 #include "util/Date.hpp"
 #include "util/ScopedString.hpp"
+#include "util/Image.hpp"
 #include "app/Configuration.hpp"
 
 #include "app/map/TitleType.hpp"
