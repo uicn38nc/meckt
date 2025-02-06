@@ -282,6 +282,18 @@ Node::operator sf::Color() const {
     if(values.size() < 3)
         throw std::runtime_error("error: invalid cast from 'node' to type 'sf::Color&'");
 
+    // Check if the numbers are float between 0 and 1.
+    // If so, then parse the list as an HSV color code.
+    // TODO: Fix issues where it is parsed as HSV for low RGB values.
+    if((values[0] >= 0.0 && values[0] < 1.0)
+    && (values[1] >= 0.0 && values[1] < 1.0)
+    && (values[2] >= 0.0 && values[2] < 1.0)) {
+        float h = values[0] * 360.f;
+        float s = values[1];
+        float v = values[2];
+        return sf::HSVColor(h, s, v).toRgb();
+    }
+
     return sf::Color((int) values[0], (int) values[1], (int) values[2]);
 }
 
@@ -467,6 +479,16 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                 break;
                 
             case VALUE:
+                // Skip the current token if it is 'hsv' before a list.
+                if(token->Is(TokenType::IDENTIFIER)
+                && tokens.size() > 0
+                && tokens.front()->Is(TokenType::LEFT_BRACE)) {
+                    std::string id = ParseIdentifier(token, tokens);
+                    if(id == "hsv") {
+                        continue;
+                    }
+                }
+
                 tokens.push_front(token);
                 Node node = ParseNode(tokens);
 
