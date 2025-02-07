@@ -437,9 +437,10 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
             values.SetDepth(depth);
             return values;
         }
-            
-        if(token->Is(TokenType::COMMENT))
-            continue;
+
+        // Comments are discarded in the lexer (until they are actually used).
+        // if(token->Is(TokenType::COMMENT))
+        //     continue;
 
         switch(state) {
             case KEY:
@@ -475,20 +476,11 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                     op = (Operator)(((int) token->GetType()) - 3);
                     break;
                 }
-                throw std::runtime_error(fmt::format("Unexpected token while operator (type={}).", (int) token->GetType()));
+                fmt::println("{}", key);
+                throw std::runtime_error(fmt::format("Unexpected token while parsing operator (key={}, type={}).", key, (int) token->GetType()));
                 break;
                 
             case VALUE:
-                // Skip the current token if it is 'hsv' before a list.
-                if(token->Is(TokenType::IDENTIFIER)
-                && tokens.size() > 0
-                && tokens.front()->Is(TokenType::LEFT_BRACE)) {
-                    std::string id = ParseIdentifier(token, tokens);
-                    if(id == "hsv") {
-                        continue;
-                    }
-                }
-
                 tokens.push_front(token);
                 Node node = ParseNode(tokens);
 
@@ -554,6 +546,14 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
 
         if(!token->Is(TokenType::LEFT_BRACE))
             throw std::runtime_error("error: unexpected token while parsing list.");
+    }
+
+    // Skip hsv keyword
+    if(token->Is(TokenType::IDENTIFIER) && std::get<std::string>(token->GetValue()) == "hsv"
+    && !tokens.empty() && tokens.front()->Is(TokenType::LEFT_BRACE)) {
+        // Remove LEFT_BRACE token from the list.
+        token = tokens.front();
+        tokens.pop_front();
     }
 
     // Handle simple/raw values such as number, bool, string...

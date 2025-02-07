@@ -69,7 +69,8 @@ PToken Parser::ReadToken(Reader& reader) {
             // Ignore '#' in value of token.
             reader.Start();
             reader.SkipTo('\n');
-            return MakeShared<Token>(TokenType::COMMENT, reader.End());
+            // return MakeShared<Token>(TokenType::COMMENT, reader.End());
+            return nullptr;
         case '"': return ReadString(reader);
         default:
             if(String::IsDigit(ch) || ch == '-') {
