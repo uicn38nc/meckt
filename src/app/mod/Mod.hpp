@@ -33,6 +33,7 @@ public:
     void LoadProvincesHistory();
     void LoadTitles();
     void LoadTitlesHistory();
+    void LoadCultures();
 
     std::vector<SharedPtr<Title>> ParseTitles(const std::string& filePath, Parser::Node& data);
 
@@ -58,6 +59,8 @@ private:
     std::map<std::string, SharedPtr<Title>> m_Titles;
     std::map<TitleType, std::vector<SharedPtr<Title>>> m_TitlesByType;
     std::map<int, SharedPtr<BaronyTitle>> m_BaroniesByProvinceIds;
+
+    std::map<std::string, SharedPtr<Culture>> m_Cultures;
 
     TerrainType m_DefaultLandTerrain;
     TerrainType m_DefaultSeaTerrain;

@@ -14,4 +14,7 @@ namespace String {
     bool IsDigit(char ch);
     bool IsAlpha(char ch);
     bool IsAlphaNumeric(char ch);
+
+    double ParseDouble(const std::string& str);
+    int ParseInt(const std::string& str);
 }

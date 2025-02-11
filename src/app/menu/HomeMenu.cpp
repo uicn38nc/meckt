@@ -56,14 +56,14 @@ void HomeMenu::Render() {
             }
             else {
                 LOG_INFO("Opened mod without custom map at {}", dirPath);
-                error = fmt::format("This mod does not have a custom map.");
+                error = "This mod does not have a custom map.";
             }
-            free(dirPath);
         }
         else if(result != NFD_CANCEL) {
             LOG_ERROR("Failed to open mod at {}", NFD_GetError());
             error = fmt::format("Failed to open mod ({})", NFD_GetError());
         }
+        free(dirPath);
     }
     if(ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         ImGui::SetTooltip("Select a mod directory (with descriptor file)");

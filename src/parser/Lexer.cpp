@@ -128,7 +128,7 @@ PToken Parser::ReadNumber(Reader& reader) {
     }
     std::string str = reader.End();
     try {
-        double value = std::stod(str);
+        double value = String::ParseDouble(str);
         return MakeShared<Token>(TokenType::NUMBER, value);
     }
     catch(std::exception& e) {

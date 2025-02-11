@@ -79,3 +79,21 @@ bool String::IsAlpha(char ch) {
 bool String::IsAlphaNumeric(char ch) {
     return IsDigit(ch) || IsAlpha(ch);
 }
+
+double String::ParseDouble(const std::string& str) {
+    std::stringstream ss(str);
+    // Force the use of '.' as the decimal separator.
+    ss.imbue(std::locale("C"));
+    double value;
+    ss >> value;
+    return value;
+}
+
+int String::ParseInt(const std::string& str) {
+    std::stringstream ss(str);
+    // Force the use of '.' as the decimal separator.
+    ss.imbue(std::locale("C"));
+    int value;
+    ss >> value;
+    return value;
+}

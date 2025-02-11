@@ -1,4 +1,5 @@
 #include "Mod.hpp"
+#include "app/mod/Culture.hpp"
 #include "app/map/Province.hpp"
 #include "app/map/Title.hpp"
 #include "parser/Parser.hpp"
@@ -34,7 +35,7 @@ sf::Image Mod::GetCultureImage() {
     sf::Image image = Image::MapPixels(m_ProvinceImage, [&](auto& mappedColors){
         for(const auto& [provinceColorId, province] : m_Provinces) {
             if(!province->GetCulture().empty()) {
-                mappedColors[province->GetColor().toInteger()] = sf::Color(province->GetCulture()[0], province->GetCulture()[1], province->GetCulture()[2]).toInteger();
+                mappedColors[province->GetColor().toInteger()] = m_Cultures[province->GetCulture()]->GetColor().toInteger();
                 continue;
             }
 
@@ -45,23 +46,29 @@ sf::Image Mod::GetCultureImage() {
                 continue;
             }
 
-            std::string culture = "";
+            std::string cultureName = "";
             for(const auto& dejureTitle : liege->GetDejureTitles()) {
                 const SharedPtr<BaronyTitle>& barony = CastSharedPtr<BaronyTitle>(dejureTitle);
                 const SharedPtr<Province>& baronyProvince = m_ProvincesByIds[barony->GetProvinceId()];
 
                 if(baronyProvince != nullptr && !baronyProvince->GetCulture().empty()) {
-                    culture = baronyProvince->GetCulture();
+                    cultureName = baronyProvince->GetCulture();
                     break;
-                }   
+                }
             }
 
-            if(culture.empty()) {
+            if(cultureName.empty()) {
                 mappedColors[province->GetColor().toInteger()] = defaultColor;
                 continue;
             }
 
-            mappedColors[province->GetColor().toInteger()] = sf::Color(culture[0], culture[1], culture[2]).toInteger();
+            if(m_Cultures.count(cultureName) == 0) {
+                mappedColors[province->GetColor().toInteger()] = sf::Color(cultureName[0], cultureName[1], cultureName[2]).toInteger();
+                continue;
+            }
+
+            SharedPtr<Culture> culture = m_Cultures[cultureName];
+            mappedColors[province->GetColor().toInteger()] = culture->GetColor().toInteger();
         }    
     });
     return image;
@@ -249,6 +256,7 @@ void Mod::Load() {
     this->LoadProvincesHistory();
     this->LoadTitles();
     this->LoadTitlesHistory();
+    this->LoadCultures();
 }
 
 void Mod::LoadDefaultMapFile() {
@@ -513,6 +521,32 @@ void Mod::LoadTitlesHistory() {
     }
 }
 
+void Mod::LoadCultures() {
+    std::set<std::string> filesPath = File::ListFiles(m_Dir + "/common/culture/cultures/");
+
+    for(const auto& filePath : filesPath) {
+        try {
+            Parser::Node data = Parser::ParseFile(filePath);
+
+            for(auto& [k, pair] : data.GetEntries()) {
+                if(!std::holds_alternative<std::string>(k))
+                    continue;
+                std::string key = std::get<std::string>(k);
+                auto& [op, value] = pair;
+
+                sf::Color color = value.Get("color", sf::Color::White);
+                SharedPtr<Culture> culture = MakeShared<Culture>(key, color);
+                m_Cultures[culture->GetName()] = culture;
+            }
+        }
+        catch(const std::runtime_error& e) {
+            LOG_ERROR("Failed to parse file {} : {}", filePath, e.what());
+        }
+    }
+
+    LOG_INFO("Loaded {} cultures from {} files", m_Cultures.size(), filesPath.size());
+}
+
 void Mod::LoadTitles() {
     std::set<std::string> filesPath = File::ListFiles(m_Dir + "/common/landed_titles/");
 
@@ -525,10 +559,10 @@ void Mod::LoadTitles() {
         std::vector<SharedPtr<Title>> titles = ParseTitles(filePath, data);
     }
 
-    LOG_INFO("loaded {} titles from {} files", m_Titles.size(), filesPath.size());
+    LOG_INFO("Loaded {} titles from {} files", m_Titles.size(), filesPath.size());
     
     for(int i = 0; i < (int) TitleType::COUNT; i++)
-        LOG_INFO("loaded {} {} titles", m_TitlesByType[(TitleType) i].size(), TitleTypeLabels[i]);
+        LOG_INFO("Loaded {} {} titles", m_TitlesByType[(TitleType) i].size(), TitleTypeLabels[i]);
 }
 
 std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Parser::Node& data) {

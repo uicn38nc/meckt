@@ -285,12 +285,12 @@ Node::operator sf::Color() const {
     // Check if the numbers are float between 0 and 1.
     // If so, then parse the list as an HSV color code.
     // TODO: Fix issues where it is parsed as HSV for low RGB values.
-    if((values[0] >= 0.0 && values[0] < 1.0)
-    && (values[1] >= 0.0 && values[1] < 1.0)
-    && (values[2] >= 0.0 && values[2] < 1.0)) {
-        float h = values[0] * 360.f;
-        float s = values[1];
-        float v = values[2];
+    if((values[0] >= 0.0 && values[0] <= 1.0)
+    && (values[1] >= 0.0 && values[1] <= 1.0)
+    && (values[2] >= 0.0 && values[2] <= 1.0)) {
+        float h = std::min(values[0] * 360, 359.99);
+        float s = std::min(values[1], 0.99);
+        float v = std::min(values[2], 0.99);
         return sf::HSVColor(h, s, v).toRgb();
     }
 
@@ -476,13 +476,16 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                     op = (Operator)(((int) token->GetType()) - 3);
                     break;
                 }
-                fmt::println("{}", key);
                 throw std::runtime_error(fmt::format("Unexpected token while parsing operator (key={}, type={}).", key, (int) token->GetType()));
                 break;
                 
             case VALUE:
                 tokens.push_front(token);
                 Node node = ParseNode(tokens);
+
+                if(key.index() == 1 && std::get<std::string>(key) == "a") {
+                    fmt::println("\n\n{}\n{}\n\n", (double) node, std::get<double>(token->GetValue()));
+                }
 
                 if(values.ContainsKey(key)) {
                     Node& current = values[key];
@@ -549,7 +552,7 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
     }
 
     // Skip hsv keyword
-    if(token->Is(TokenType::IDENTIFIER) && std::get<std::string>(token->GetValue()) == "hsv"
+    else if(token->Is(TokenType::IDENTIFIER) && std::get<std::string>(token->GetValue()) == "hsv"
     && !tokens.empty() && tokens.front()->Is(TokenType::LEFT_BRACE)) {
         // Remove LEFT_BRACE token from the list.
         token = tokens.front();

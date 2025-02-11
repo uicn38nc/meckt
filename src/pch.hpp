@@ -52,6 +52,8 @@ namespace Parser {
 }
 
 class Mod;
+class Culture;
+class Religion;
 class Province;
 class Title;
 class HighTitle;

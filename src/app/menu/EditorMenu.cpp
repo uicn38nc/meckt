@@ -78,7 +78,7 @@ void EditorMenu::UpdateHoveringText() {
     if(province == nullptr)
         goto Hide;
 
-    if(m_MapMode == MapMode::PROVINCES) {
+    if(m_MapMode == MapMode::PROVINCES || m_MapMode == MapMode::CULTURE || m_MapMode == MapMode::RELIGION) {
         m_HoverText.setString(fmt::format("#{} ({})", province->GetId(), province->GetName()));
         m_HoverText.setPosition({(float) mousePosition.x + 5, (float) mousePosition.y - m_HoverText.getGlobalBounds().height - 10});
         m_HoverText.setFillColor(brightenColor(province->GetColor()));
@@ -263,10 +263,12 @@ void EditorMenu::Event(const sf::Event& event) {
 
         if(d < 5) {
 
-            if(m_MapMode == MapMode::PROVINCES || MapModeIsTitle(m_MapMode)) {
+            if(m_MapMode == MapMode::PROVINCES
+            || m_MapMode == MapMode::CULTURE
+            || m_MapMode == MapMode::RELIGION
+            || MapModeIsTitle(m_MapMode)) {
                 SharedPtr<Province> province = this->GetHoveredProvince();
                 if(province != nullptr) {
-
                     if(MapModeIsTitle(m_MapMode)) {
                         SharedPtr<Title> title = m_App->GetMod()->GetProvinceFocusedTitle(province, MapModeToTileType(m_MapMode));
                         if(title == nullptr)
@@ -293,7 +295,10 @@ void EditorMenu::Render() {
 
     ToggleCamera(true);
 
-    if(m_MapMode == MapMode::PROVINCES || MapModeIsTitle(m_MapMode))
+    if(m_MapMode == MapMode::PROVINCES
+    || m_MapMode == MapMode::CULTURE
+    || m_MapMode == MapMode::RELIGION
+    || MapModeIsTitle(m_MapMode))
         window.draw(m_MapSprite, &Configuration::shaders.Get(Shaders::PROVINCES));
     else 
         window.draw(m_MapSprite);
@@ -322,7 +327,8 @@ void EditorMenu::Render() {
 
 void EditorMenu::InitSelectionCallbacks() {
     m_SelectionHandler.AddCallback([&](sf::Mouse::Button button, SharedPtr<Province> province) {
-        if(m_MapMode != MapMode::PROVINCES || button != sf::Mouse::Button::Left)
+        if((m_MapMode != MapMode::PROVINCES && m_MapMode != MapMode::CULTURE && m_MapMode != MapMode::RELIGION)
+        || button != sf::Mouse::Button::Left)
             return SelectionCallbackResult::CONTINUE;
 
         bool isSelected = m_SelectionHandler.IsSelected(province);
