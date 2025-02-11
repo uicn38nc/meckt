@@ -1,5 +1,6 @@
 #include "Mod.hpp"
 #include "app/mod/Culture.hpp"
+#include "app/mod/Religion.hpp"
 #include "app/map/Province.hpp"
 #include "app/map/Title.hpp"
 #include "parser/Parser.hpp"
@@ -34,26 +35,23 @@ sf::Image Mod::GetCultureImage() {
 
     sf::Image image = Image::MapPixels(m_ProvinceImage, [&](auto& mappedColors){
         for(const auto& [provinceColorId, province] : m_Provinces) {
-            if(!province->GetCulture().empty()) {
-                mappedColors[province->GetColor().toInteger()] = m_Cultures[province->GetCulture()]->GetColor().toInteger();
-                continue;
-            }
+            std::string cultureName = province->GetCulture();
+            if(cultureName.empty()) {
+                const SharedPtr<CountyTitle>& liege = CastSharedPtr<CountyTitle>(this->GetProvinceLiegeTitle(province, TitleType::COUNTY));
 
-            const SharedPtr<CountyTitle>& liege = CastSharedPtr<CountyTitle>(this->GetProvinceLiegeTitle(province, TitleType::COUNTY));
+                if(liege == nullptr) {
+                    mappedColors[province->GetColor().toInteger()] = defaultColor;
+                    continue;
+                }
 
-            if(liege == nullptr) {
-                mappedColors[province->GetColor().toInteger()] = defaultColor;
-                continue;
-            }
+                for(const auto& dejureTitle : liege->GetDejureTitles()) {
+                    const SharedPtr<BaronyTitle>& barony = CastSharedPtr<BaronyTitle>(dejureTitle);
+                    const SharedPtr<Province>& baronyProvince = m_ProvincesByIds[barony->GetProvinceId()];
 
-            std::string cultureName = "";
-            for(const auto& dejureTitle : liege->GetDejureTitles()) {
-                const SharedPtr<BaronyTitle>& barony = CastSharedPtr<BaronyTitle>(dejureTitle);
-                const SharedPtr<Province>& baronyProvince = m_ProvincesByIds[barony->GetProvinceId()];
-
-                if(baronyProvince != nullptr && !baronyProvince->GetCulture().empty()) {
-                    cultureName = baronyProvince->GetCulture();
-                    break;
+                    if(baronyProvince != nullptr && !baronyProvince->GetCulture().empty()) {
+                        cultureName = baronyProvince->GetCulture();
+                        break;
+                    }
                 }
             }
 
@@ -69,6 +67,52 @@ sf::Image Mod::GetCultureImage() {
 
             SharedPtr<Culture> culture = m_Cultures[cultureName];
             mappedColors[province->GetColor().toInteger()] = culture->GetColor().toInteger();
+        }    
+    });
+    return image;
+}
+
+sf::Image Mod::GetReligionImage() {
+    // Map provinces colors to their religion color (province -> county -> county capital -> province).
+    // Copy province image.
+    // Replace province pixels by their mapped color.
+    sf::Uint32 defaultColor = sf::Color(127, 127, 127).toInteger();
+
+    sf::Image image = Image::MapPixels(m_ProvinceImage, [&](auto& mappedColors){
+        for(const auto& [provinceColorId, province] : m_Provinces) {
+            std::string religionName = province->GetReligion();
+
+            if(religionName.empty()) {
+                const SharedPtr<CountyTitle>& liege = CastSharedPtr<CountyTitle>(this->GetProvinceLiegeTitle(province, TitleType::COUNTY));
+
+                if(liege == nullptr) {
+                    mappedColors[province->GetColor().toInteger()] = defaultColor;
+                    continue;
+                }
+
+                for(const auto& dejureTitle : liege->GetDejureTitles()) {
+                    const SharedPtr<BaronyTitle>& barony = CastSharedPtr<BaronyTitle>(dejureTitle);
+                    const SharedPtr<Province>& baronyProvince = m_ProvincesByIds[barony->GetProvinceId()];
+
+                    if(baronyProvince != nullptr && !baronyProvince->GetReligion().empty()) {
+                        religionName = baronyProvince->GetReligion();
+                        break;
+                    }
+                }
+            }
+
+            if(religionName.empty()) {
+                mappedColors[province->GetColor().toInteger()] = defaultColor;
+                continue;
+            }
+
+            if(m_Cultures.count(religionName) == 0) {
+                mappedColors[province->GetColor().toInteger()] = sf::Color(religionName[0], religionName[1], religionName[2]).toInteger();
+                continue;
+            }
+
+            SharedPtr<Religion> religion = m_Religions[religionName];
+            mappedColors[province->GetColor().toInteger()] = religion->GetColor().toInteger();
         }    
     });
     return image;
@@ -257,6 +301,7 @@ void Mod::Load() {
     this->LoadTitles();
     this->LoadTitlesHistory();
     this->LoadCultures();
+    this->LoadReligions();
 }
 
 void Mod::LoadDefaultMapFile() {
@@ -545,6 +590,43 @@ void Mod::LoadCultures() {
     }
 
     LOG_INFO("Loaded {} cultures from {} files", m_Cultures.size(), filesPath.size());
+}
+
+void Mod::LoadReligions() {
+    std::set<std::string> filesPath = File::ListFiles(m_Dir + "/common/religion/religions/");
+
+    // Faiths are defined within a religion, so we have to loop over every religion
+    // keys, and then over every keys inside "faiths".
+    for(const auto& filePath : filesPath) {
+        try {
+            Parser::Node data = Parser::ParseFile(filePath);
+
+            for(auto& [k, pair] : data.GetEntries()) {
+                if(!std::holds_alternative<std::string>(k))
+                    continue;
+                std::string key = std::get<std::string>(k);
+                auto& [op, value] = pair;
+                if(!value.ContainsKey("faiths"))
+                    continue;
+
+                for(auto& [k2, faithPair] : value.Get("faiths").GetEntries()) {
+                    if(!std::holds_alternative<std::string>(k2))
+                        continue;
+                    std::string faithKey = std::get<std::string>(k2);
+                    auto& [op2, faithValue] = faithPair;
+
+                    sf::Color color = faithValue.Get("color", sf::Color::White);
+                    SharedPtr<Religion> religion = MakeShared<Religion>(faithKey, color);
+                    m_Religions[religion->GetName()] = religion;
+                }
+            }
+        }
+        catch(const std::runtime_error& e) {
+            LOG_ERROR("Failed to parse file {} : {}", filePath, e.what());
+        }
+    }
+
+    LOG_INFO("Loaded {} faiths from {} files", m_Religions.size(), filesPath.size());
 }
 
 void Mod::LoadTitles() {

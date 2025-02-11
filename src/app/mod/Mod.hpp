@@ -9,6 +9,7 @@ public:
     sf::Image& GetProvinceImage();
     sf::Image& GetRiversImage();
     sf::Image GetCultureImage();
+    sf::Image GetReligionImage();
     sf::Image GetTitleImage(TitleType type);
     bool HasMap() const;
 
@@ -34,6 +35,7 @@ public:
     void LoadTitles();
     void LoadTitlesHistory();
     void LoadCultures();
+    void LoadReligions();
 
     std::vector<SharedPtr<Title>> ParseTitles(const std::string& filePath, Parser::Node& data);
 
@@ -61,6 +63,7 @@ private:
     std::map<int, SharedPtr<BaronyTitle>> m_BaroniesByProvinceIds;
 
     std::map<std::string, SharedPtr<Culture>> m_Cultures;
+    std::map<std::string, SharedPtr<Religion>> m_Religions;
 
     TerrainType m_DefaultLandTerrain;
     TerrainType m_DefaultSeaTerrain;
