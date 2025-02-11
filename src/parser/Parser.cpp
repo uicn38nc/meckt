@@ -552,7 +552,7 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
     }
 
     // Skip hsv keyword
-    else if(token->Is(TokenType::IDENTIFIER) && std::get<std::string>(token->GetValue()) == "hsv"
+    else if(token->Is(TokenType::IDENTIFIER) && (std::get<std::string>(token->GetValue()) == "hsv" || std::get<std::string>(token->GetValue()) == "rgb")
     && !tokens.empty() && tokens.front()->Is(TokenType::LEFT_BRACE)) {
         // Remove LEFT_BRACE token from the list.
         token = tokens.front();
