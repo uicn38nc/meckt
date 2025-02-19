@@ -45,7 +45,8 @@ bool Node::IsList() const {
     ValueType t = this->GetType();
     return (t == ValueType::NUMBER_LIST)
         || (t == ValueType::BOOL_LIST)
-        || (t == ValueType::STRING_LIST);
+        || (t == ValueType::STRING_LIST)
+        || (t == ValueType::NODE_LIST);
 
 }
 
@@ -56,6 +57,10 @@ uint Node::GetDepth() const {
 void Node::SetDepth(uint depth) {
     m_Depth = depth;
     m_Value->SetDepth(depth);
+}
+
+void Node::Push(const Node& node) {
+    this->Push(std::vector<Node>{node});
 }
 
 void Node::Push(const RawValue& value) {
@@ -76,6 +81,10 @@ void Node::Push(const RawValue& value) {
             for(const auto& v : std::get<std::vector<T>>(value)) \
                 std::get<std::vector<T>>(holder->m_Value).push_back(v); \
         } \
+        
+    #define PushToNodeList() \
+        for(const auto& v : std::get<std::vector<Node>>(value)) \
+            std::get<std::vector<Node>>(holder->m_Value).push_back(v); \
 
     switch(this->GetType()) {
         case ValueType::NUMBER:
@@ -98,6 +107,9 @@ void Node::Push(const RawValue& value) {
             break;
         case ValueType::STRING_LIST:
             PushToList(std::string);
+            break;
+        case ValueType::NODE_LIST:
+            PushToNodeList();
             break;
         default:
             break;
@@ -135,6 +147,7 @@ template ScopedString Node::Get<ScopedString>(const Key&, ScopedString) const;
 template std::vector<double> Node::Get<std::vector<double>>(const Key&, std::vector<double>) const;
 template std::vector<bool> Node::Get<std::vector<bool>>(const Key&, std::vector<bool>) const;
 template std::vector<std::string> Node::Get<std::vector<std::string>>(const Key&, std::vector<std::string>) const;
+template std::vector<Node> Node::Get<std::vector<Node>>(const Key&, std::vector<Node>) const;
 template RawValue Node::Get<RawValue>(const Key&, RawValue) const;
 template Key Node::Get<Key>(const Key&, Key) const;
 template sf::Color Node::Get<sf::Color>(const Key&, sf::Color) const;
@@ -250,6 +263,12 @@ Node::operator std::vector<std::string>&() const {
     if(!this->Is(ValueType::STRING_LIST))
         throw std::runtime_error("error: invalid cast from 'node' to type 'std::vector<std::string>&'");
     return std::get<std::vector<std::string>>(this->GetLeafHolder()->m_Value);
+}
+
+Node::operator std::vector<Node>&() const {
+    if(!this->Is(ValueType::NODE_LIST))
+        throw std::runtime_error("error: invalid cast from 'node' to type 'std::vector<Node>&'");
+    return std::get<std::vector<Node>>(this->GetLeafHolder()->m_Value);
 }
 
 Node::operator RawValue&() const {
@@ -400,7 +419,14 @@ SharedPtr<AbstractValueHolder> LeafHolder::Copy() const {
     return copy;
 }
 
-void LeafHolder::SetDepth(uint depth) {}
+void LeafHolder::SetDepth(uint depth) {
+    if(this->GetType() == ValueType::NODE_LIST) {
+        std::vector<Node>& nodes = std::get<std::vector<Node>>(m_Value);
+        for(Node& node : nodes) {
+            node.SetDepth(depth+1);
+        }
+    }
+}
 
 Node Parser::ParseFile(const std::string& filePath) {
     std::ifstream file(filePath);
@@ -483,15 +509,14 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                 tokens.push_front(token);
                 Node node = ParseNode(tokens);
 
-                if(key.index() == 1 && std::get<std::string>(key) == "a") {
-                    fmt::println("\n\n{}\n{}\n\n", (double) node, std::get<double>(token->GetValue()));
-                }
-
                 if(values.ContainsKey(key)) {
                     Node& current = values[key];
 
                     if(!current.Is(ValueType::NODE)) {
                         current.Push((RawValue) node);
+                    }
+                    else {
+                        current.Push(node);
                     }
 
                     // TODO: handle array of nodes?
@@ -577,6 +602,9 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
         
         if(token->Is(TokenType::IDENTIFIER) || token->Is(TokenType::STRING))
             return ParseList<std::string>(tokens);
+            
+        if(token->Is(TokenType::LEFT_BRACE))
+            return ParseList<Node>(tokens);
     }
     
     return Parse(tokens, 1);
@@ -596,13 +624,13 @@ Node Parser::Impl::ParseRaw(PToken token, std::deque<PToken>& tokens) {
         case TokenType::STRING:
             return Node(std::get<std::string>(token->GetValue()));
         default:
-            throw std::runtime_error("error: unexpected token while parsing value.");
+            throw std::runtime_error("error: unexpected token while parsing raw value.");
     }
 }
 
 Node Parser::Impl::ParseIdentifier(PToken token, std::deque<PToken>& tokens) {
     if(!token->Is(TokenType::IDENTIFIER))
-        throw std::runtime_error("error: unexpected token while parsing string.");
+        throw std::runtime_error("error: unexpected token while parsing identifier.");
 
     std::string firstValue = std::get<std::string>(token->GetValue());
 
@@ -694,6 +722,29 @@ Node Parser::Impl::ParseList(std::deque<PToken>& tokens) {
     
     return Node(list);
 }
+
+
+template <>
+Node Parser::Impl::ParseList<Node>(std::deque<PToken>& tokens) {
+    std::vector<Node> list;
+    PToken token;
+    
+    // The RIGHT_BRACE token must be removed from the list before returning.
+    token = tokens.front();
+    tokens.pop_front();
+
+    while(!token->Is(TokenType::RIGHT_BRACE)) {
+        list.push_back(Parse(tokens, 1));
+
+        if(tokens.empty())
+            throw std::runtime_error("error: unexpected end while parsing list.");
+        
+        token = tokens.front();
+        tokens.pop_front();
+    }
+    
+    return Node(list);
+}
     
 bool Parser::Impl::IsList(std::deque<PToken>& tokens) {
     if(tokens.size() < 2)
@@ -711,7 +762,8 @@ bool Parser::Impl::IsList(std::deque<PToken>& tokens) {
     // Or if there is only an element in the list, check if the second
     // token is a RIGHT_BRACE.
     return (secondToken->Is(firstToken->GetType()) && IS_LIST_TYPE(secondToken))
-        || (secondToken->Is(TokenType::RIGHT_BRACE) && IS_LIST_TYPE(firstToken));
+        || (secondToken->Is(TokenType::RIGHT_BRACE) && IS_LIST_TYPE(firstToken))
+        || firstToken->Is(TokenType::LEFT_BRACE);
 }
 
 void Parser::Benchmark() {

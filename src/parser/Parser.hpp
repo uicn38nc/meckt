@@ -8,7 +8,7 @@
 
 namespace Parser {
     using Key = std::variant<double, std::string, Date, ScopedString>;
-    using RawValue = std::variant<double, bool, std::string, Date, ScopedString, std::vector<double>, std::vector<bool>, std::vector<std::string>>;
+    using RawValue = std::variant<double, bool, std::string, Date, ScopedString, std::vector<double>, std::vector<bool>, std::vector<std::string>, std::vector<Node>>;
 
     enum class Operator {
         EQUAL,
@@ -27,6 +27,7 @@ namespace Parser {
         NUMBER_LIST,
         BOOL_LIST,
         STRING_LIST,
+        NODE_LIST,
         NODE
     };
 
@@ -46,6 +47,7 @@ namespace Parser {
             void SetDepth(uint depth);
 
             // Functions to use with LeafHolder.
+            void Push(const Node& node);
             void Push(const RawValue& value);
 
             // Functions to use with NodeHolder.
@@ -72,6 +74,7 @@ namespace Parser {
             operator std::vector<double>&() const;
             operator std::vector<bool>&() const;
             operator std::vector<std::string>&() const;
+            operator std::vector<Node>&() const;
             operator RawValue&() const;
             operator Key() const;
             operator sf::Color() const;
@@ -148,6 +151,8 @@ namespace Parser {
 
         template<typename T>
         Node ParseList(std::deque<PToken>& tokens);
+        template <>
+        Node ParseList<Node>(std::deque<PToken>& tokens);
 
         bool IsList(std::deque<PToken>& tokens);
     }
@@ -235,9 +240,30 @@ public:
                         return fmt::format("{}", v);
                     }), " ")
                 );
+            case Parser::ValueType::NODE_LIST:
+                return format_to(ctx.out(), "{{\n{}\n}}", fmt::join(
+                    std::views::transform(std::get<std::vector<Parser::Node>>(value), [](const auto& node) {
+                        return formatNode(node);
+                    }), "\n")
+                );
             default:
                 return format_to(ctx.out(), "");
         }
+    }
+
+    static std::string formatNode(const Parser::Node& node) {
+        if(node.Is(Parser::ValueType::NODE)) {
+            auto v = std::views::transform(node.GetEntries(), [](const auto& p) {
+                return fmt::format(
+                    FMT_COMPILE("{} {} {}"),
+                    p.first, // Key
+                    fmt::format("{}", p.second.first), // Operator
+                    formatNode(p.second.second) // Value
+                );
+            });
+            return fmt::format("{}{{ {} }}", std::string(node.GetDepth()-1, '\t'), fmt::join(v, " "));
+        }
+        return fmt::format("{}", (Parser::RawValue&) node);
     }
 };
 
