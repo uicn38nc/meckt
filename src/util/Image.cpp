@@ -52,7 +52,6 @@ sf::Image Image::MapPixels(const sf::Image& originalImage, std::function<void(st
             char* colorPtr = static_cast<char*>((void*) &color);
             char* targetPtr = static_cast<char*>((void*) &newPixels[startIndex]);
             char* replacePtr = NULL;
-            const char alpha = (const char) 0xFF;
 
             while(index < endIndex) {
                 // Copy the four bytes corresponding to RGBA from the original image pixels
@@ -62,7 +61,7 @@ sf::Image Image::MapPixels(const sf::Image& originalImage, std::function<void(st
                 colorPtr[3] = originalPixels[index++]; // R
                 colorPtr[2] = originalPixels[index++]; // G
                 colorPtr[1] = originalPixels[index++]; // B
-                index++;
+                colorPtr[0] = originalPixels[index++]; // A
 
                 // Search for the corresponding target color in the mapped values only
                 // if it isn't the same color has the previous one.
@@ -76,7 +75,7 @@ sf::Image Image::MapPixels(const sf::Image& originalImage, std::function<void(st
                 *targetPtr++ = replacePtr[3]; // R
                 *targetPtr++ = replacePtr[2]; // G
                 *targetPtr++ = replacePtr[1]; // B
-                *targetPtr++ = alpha;
+                *targetPtr++ = replacePtr[0]; // A
 
                 previousColor = color;
             }    

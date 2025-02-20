@@ -28,20 +28,24 @@ sf::Image& Mod::GetRiversImage() {
 }
 
 sf::Image Mod::GetCultureImage() {
-    // Map provinces colors to their culture color (province -> county -> county capital -> province).
-    // Copy province image.
-    // Replace province pixels by their mapped color.
-    sf::Uint32 defaultColor = sf::Color(127, 127, 127).toInteger();
+    // - Map provinces colors to their culture color (province -> county -> county capital -> province).
+    // - Copy province image.
+    // - Replace province pixels by their mapped color.
+    // - Provinces with an explicit culture assigned will have alpha=0
+    //   in order to inform the shader.
+    sf::Color defaultColor = sf::Color(127, 127, 127);
 
     sf::Image image = Image::MapPixels(m_ProvinceImage, [&](auto& mappedColors){
         for(const auto& [provinceColorId, province] : m_Provinces) {
             std::string cultureName = province->GetCulture();
+            sf::Color color = defaultColor;
+            sf::Uint8 alpha = cultureName.empty() ? 255 : 0;
+
             if(cultureName.empty()) {
                 const SharedPtr<CountyTitle>& liege = CastSharedPtr<CountyTitle>(this->GetProvinceLiegeTitle(province, TitleType::COUNTY));
 
                 if(liege == nullptr) {
-                    mappedColors[province->GetColor().toInteger()] = defaultColor;
-                    continue;
+                    goto End;
                 }
 
                 for(const auto& dejureTitle : liege->GetDejureTitles()) {
@@ -56,38 +60,40 @@ sf::Image Mod::GetCultureImage() {
             }
 
             if(cultureName.empty()) {
-                mappedColors[province->GetColor().toInteger()] = defaultColor;
-                continue;
+                color = sf::Color(cultureName[0], cultureName[1], cultureName[2]);
+            } 
+            else {
+                SharedPtr<Culture> culture = m_Cultures[cultureName];
+                color = culture->GetColor();
             }
 
-            if(m_Cultures.count(cultureName) == 0) {
-                mappedColors[province->GetColor().toInteger()] = sf::Color(cultureName[0], cultureName[1], cultureName[2]).toInteger();
-                continue;
-            }
-
-            SharedPtr<Culture> culture = m_Cultures[cultureName];
-            mappedColors[province->GetColor().toInteger()] = culture->GetColor().toInteger();
+            End:
+            color.a = alpha;
+            mappedColors[province->GetColor().toInteger()] = color.toInteger();
         }    
     });
     return image;
 }
 
 sf::Image Mod::GetReligionImage() {
-    // Map provinces colors to their religion color (province -> county -> county capital -> province).
-    // Copy province image.
-    // Replace province pixels by their mapped color.
-    sf::Uint32 defaultColor = sf::Color(127, 127, 127).toInteger();
+    // - Map provinces colors to their religion color (province -> county -> county capital -> province).
+    // - Copy province image.
+    // - Replace province pixels by their mapped color.
+    // - Provinces with an explicit religion assigned will have alpha=0
+    //   in order to inform the shader.
+    sf::Color defaultColor = sf::Color(127, 127, 127);
 
     sf::Image image = Image::MapPixels(m_ProvinceImage, [&](auto& mappedColors){
         for(const auto& [provinceColorId, province] : m_Provinces) {
             std::string religionName = province->GetReligion();
+            sf::Color color = defaultColor;
+            sf::Uint8 alpha = religionName.empty() ? 255 : 0;
 
             if(religionName.empty()) {
                 const SharedPtr<CountyTitle>& liege = CastSharedPtr<CountyTitle>(this->GetProvinceLiegeTitle(province, TitleType::COUNTY));
 
                 if(liege == nullptr) {
-                    mappedColors[province->GetColor().toInteger()] = defaultColor;
-                    continue;
+                    goto End;
                 }
 
                 for(const auto& dejureTitle : liege->GetDejureTitles()) {
@@ -101,18 +107,17 @@ sf::Image Mod::GetReligionImage() {
                 }
             }
 
-            if(religionName.empty()) {
-                mappedColors[province->GetColor().toInteger()] = defaultColor;
-                continue;
+            if(m_Religions.count(religionName) == 0) {
+                color = sf::Color(religionName[0], religionName[1], religionName[2]);
+            } 
+            else {
+                SharedPtr<Religion> religion = m_Religions[religionName];
+                color = religion->GetColor();
             }
 
-            if(m_Cultures.count(religionName) == 0) {
-                mappedColors[province->GetColor().toInteger()] = sf::Color(religionName[0], religionName[1], religionName[2]).toInteger();
-                continue;
-            }
-
-            SharedPtr<Religion> religion = m_Religions[religionName];
-            mappedColors[province->GetColor().toInteger()] = religion->GetColor().toInteger();
+            End:
+            color.a = alpha;
+            mappedColors[province->GetColor().toInteger()] = color.toInteger();
         }    
     });
     return image;

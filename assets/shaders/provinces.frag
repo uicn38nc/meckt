@@ -18,6 +18,18 @@ const int DUCHY    = 3;
 const int KINGDOM  = 4;
 const int EMPIRE   = 5;
 
+const int MAPMODE_PROVINCES = 0;
+const int MAPMODE_HEIGHTMAP = 1;
+const int MAPMODE_RIVERS = 2;
+const int MAPMODE_TERRAIN = 3;
+const int MAPMODE_CULTURE = 4;
+const int MAPMODE_RELIGION = 5;
+const int MAPMODE_BARONY = 6;
+const int MAPMODE_COUNTY = 7;
+const int MAPMODE_DUCHY = 8;
+const int MAPMODE_KINGDOM = 9;
+const int MAPMODE_EMPIRE = 10;
+
 // The last (4th) element of the array is used to distinguish the type defined above.
 uniform vec4 selectedEntities[1000];
 uniform int selectedEntitiesCount;
@@ -67,20 +79,22 @@ vec4 GetEntityColor(int type) {
 int GetBorderTier() {
     // Check if it is the border of a province first to avoid unless calculation for highter tier.
     if(!IsBorder(provincesTexture)) return -1;
-    if(mapMode >= 10 && IsBorder(empireTexture)) return 5;
-    if(mapMode >= 9 && IsBorder(kingdomTexture)) return 4;
-    if(mapMode >= 8 && IsBorder(duchyTexture)) return 3;
-    if(mapMode >= 7 && IsBorder(countyTexture)) return 2;
-    if(mapMode >= 6 && IsBorder(baronyTexture)) return 1;
+    if(mapMode >= MAPMODE_EMPIRE && IsBorder(empireTexture)) return 5;
+    if(mapMode >= MAPMODE_KINGDOM && IsBorder(kingdomTexture)) return 4;
+    if(mapMode >= MAPMODE_DUCHY && IsBorder(duchyTexture)) return 3;
+    if(mapMode >= MAPMODE_COUNTY && IsBorder(countyTexture)) return 2;
+    if(mapMode >= MAPMODE_BARONY && IsBorder(baronyTexture)) return 1;
     return 0;
 }
 
 void main() {
-    vec4 pixelColor = texture2D(texture, gl_TexCoord[0].xy);
-    vec4 provincePixelColor = texture2D(provincesTexture, gl_TexCoord[0].xy);
+    vec2 pixelPos = gl_TexCoord[0].xy;
+    vec4 pixelColor = texture2D(texture, pixelPos);
+    vec4 provincePixelColor = texture2D(provincesTexture, pixelPos);
 
     // Final color that will be used for the pixel.
     vec4 color = gl_Color * pixelColor;
+    float alpha = color.a;
 
     for(int i = EMPIRE; i >= PROVINCE; i--) {
         bool isSelected = IsSelected(i, GetEntityColor(i));
@@ -96,7 +110,7 @@ void main() {
 
         if(borderTier >= 0) {
             // The highter the tier, the darker the borders.
-            float a = max(1.0, float(borderTier)) / (max(1.0, float(mapMode-5)));
+            float a = max(1.0, float(borderTier)) / (max(1.0, float(mapMode-MAPMODE_BARONY+1)));
             float t = (a*a) / 1.7;
             
             // Take the farthest color from the current color.
@@ -104,6 +118,13 @@ void main() {
             if(color.r + color.g + color.b <= 0.3) borderColor = vec4(1.0, 1.0, 1.0, 1.0);
 
             color = mix(color, borderColor, t);
+        }
+    }
+
+    if((mapMode == MAPMODE_CULTURE || mapMode == MAPMODE_RELIGION) && alpha == 0.0) {
+        color.a = 1.0;
+        if(cos(10000.0*(pixelPos.x+pixelPos.y)) >= 0.5) {
+            color = mix(color, vec4(0.0, 0.0, 0.0, 1.0), 0.75);
         }
     }
 
