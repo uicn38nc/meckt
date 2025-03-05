@@ -912,6 +912,7 @@ void Parser::Tests() {
         ASSERT("double list", "[100.52, -50.99]", SerializeList(data.Get<std::vector<double>>("double_list", {})));
         ASSERT("bool list", "[true, false, false, true]", SerializeList(data.Get<std::vector<bool>>("bool_list", {})));
         ASSERT("string list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data.Get<std::vector<std::string>>("string_list", {})));
+        ASSERT("node list", "[name = augustus, name = claudius, name = nero]", SerializeList(data.Get<std::vector<Node>>("node_list", {})));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'complex_raw_values.txt'\n{}", e.what()));
