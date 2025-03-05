@@ -939,6 +939,19 @@ void Parser::Tests() {
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'keys.txt'\n{}", e.what()));
     }
+
+    // Tests : operators
+    try {
+        data = Parser::ParseFile(dir + "operators.txt");
+        ASSERT("eq operator", Parser::Operator::EQUAL, data.GetOperator("op1"));
+        ASSERT("lt operator", Parser::Operator::LESS, data.GetOperator("op2"));
+        ASSERT("le operator", Parser::Operator::LESS_EQUAL, data.GetOperator("op3"));
+        ASSERT("gt operator", Parser::Operator::GREATER, data.GetOperator("op4"));
+        ASSERT("ge operator", Parser::Operator::GREATER_EQUAL, data.GetOperator("op5"));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'operators.txt'\n{}", e.what()));
+    }
     
     exit(0);
 }
