@@ -953,5 +953,17 @@ void Parser::Tests() {
         throw std::runtime_error(fmt::format("Failed to parse 'operators.txt'\n{}", e.what()));
     }
     
+    // Tests : Lists
+    try {
+        data = Parser::ParseFile(dir + "lists.txt");
+        ASSERT("number append list", "[10, 20, 50]", SerializeList(data.Get<std::vector<double>>("numbers", {})));
+        ASSERT("string append list", "[greedy, compassionate, brave]", SerializeList(data.Get("character").Get<std::vector<std::string>>("trait", {})));
+        ASSERT("bool append list", "[true, false, false]", SerializeList(data.Get<std::vector<bool>>("booleans", {})));
+        ASSERT("node append list", "[coat_of_arms = \"holy_order_coa1\"\nname = \"holy_order_name1\", coat_of_arms = \"holy_order_coa2\"\nname = \"holy_order_name2\"]", SerializeList(data.Get<std::vector<Node>>("holy_order_names", {})));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'lists.txt'\n{}", e.what()));
+    }
+    
     exit(0);
 }

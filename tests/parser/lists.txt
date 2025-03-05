@@ -1,5 +1,18 @@
+numbers = { 10 20 }
+numbers = { 50 }
+
 character = {
     trait = greedy
     trait = compassionate
     trait = brave
+}
+
+booleans = { yes no }
+booleans = { no }
+
+holy_order_names = {
+    { name = "holy_order_name1" coat_of_arms = "holy_order_coa1" }
+}
+holy_order_names = {
+    { name = "holy_order_name2" coat_of_arms = "holy_order_coa2" }
 }
