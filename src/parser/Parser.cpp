@@ -116,6 +116,16 @@ void Node::Push(const RawValue& value) {
     }
 }
 
+void Node::Merge(const Node& node) {
+    if(this->GetType() != ValueType::NODE)
+        throw std::runtime_error("error: invalid use of 'Node::Merge' on leaf node.");
+    if(node.GetType() != ValueType::NODE)
+        throw std::runtime_error("error: invalid use of 'Node::Merge' with leaf node.");
+    for(auto& [key, pair] : this->GetNodeHolder()->m_Values) {
+        this->Put(key, pair.second, pair.first);
+    }
+}
+
 Node& Node::Get(const Key& key) {
     if(!this->Is(ValueType::NODE))
         throw std::runtime_error("error: invalid use of 'Node::Get' on leaf node.");
@@ -516,7 +526,7 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                         current.Push((RawValue) node);
                     }
                     else {
-                        current.Push(node);
+                        current.Merge(node);
                     }
 
                     // TODO: handle array of nodes?

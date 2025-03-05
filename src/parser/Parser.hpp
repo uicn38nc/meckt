@@ -49,6 +49,7 @@ namespace Parser {
             // Functions to use with LeafHolder.
             void Push(const Node& node);
             void Push(const RawValue& value);
+            void Merge(const Node& node);
 
             // Functions to use with NodeHolder.
             Node& Get(const Key& key);
