@@ -25,8 +25,10 @@ public:
 
     void HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color color, float hue, float saturation);
     void GenerateMissingProvinces();
+    void GenerateProvinces();
 
     void Load();
+    void LoadDefines();
     void LoadProvinceImage();
     void LoadDefaultMapFile();
     void LoadProvincesDefinition();
@@ -65,6 +67,7 @@ private:
     std::map<std::string, SharedPtr<Culture>> m_Cultures;
     std::map<std::string, SharedPtr<Religion>> m_Religions;
 
+    double m_WaterLevel;
     TerrainType m_DefaultLandTerrain;
     TerrainType m_DefaultSeaTerrain;
     TerrainType m_DefaultCoastalSeaTerrain;

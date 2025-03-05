@@ -9,7 +9,8 @@
 #include <fmt/ostream.h>
 
 Mod::Mod(const std::string& dir)
-: m_Dir(dir) {}
+: m_Dir(dir), m_WaterLevel(3.8)
+{}
 
 std::string Mod::GetDir() const {
     return m_Dir;
@@ -284,6 +285,18 @@ void Mod::GenerateMissingProvinces() {
     }
 }
 
+void GenerateProvinces() {
+    // Generate all provinces based on the heightmap
+    // image and the water level defined in 00_defines.txt.
+    // 1. Generate random points on the map.
+    // 2. Propagate points to their neighbours (e.g Voronoi diagram).
+    // 3. Make provinces conquer their neighbours (n iterations)
+    //    based on the size until all provinces are at least the
+    //    minimal required size (14 pixels).
+
+    
+}
+
 void Mod::Load() {
     if(!this->HasMap())
         return;
@@ -298,6 +311,7 @@ void Mod::Load() {
         LOG_ERROR("Failed to load rivers image at ", m_Dir + "/map_data/rivers.png");
     }
 
+    this->LoadDefines();
     this->LoadProvincesDefinition();
     this->LoadProvinceImage();
     this->LoadDefaultMapFile();
@@ -422,6 +436,17 @@ void Mod::LoadProvinceImage() {
 
     for(auto& thread : threads)
         thread->wait();
+}
+
+void Mod::LoadDefines() {
+    Parser::Node result = Parser::ParseFile(m_Dir + "/common/defines/00_defines.txt");
+
+    if(!result.ContainsKey("NJominiMap")) {
+        LOG_WARNING("Key 'NJominiMap' is missing from defines file", "");
+        return;
+    }
+
+    m_WaterLevel = result.Get("NJominiMap").Get("WATERLEVEL", 3.8);
 }
 
 void Mod::LoadProvincesDefinition() {
