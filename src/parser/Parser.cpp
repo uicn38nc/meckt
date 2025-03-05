@@ -918,5 +918,27 @@ void Parser::Tests() {
         throw std::runtime_error(fmt::format("Failed to parse 'complex_raw_values.txt'\n{}", e.what()));
     }
     
+    // Tests : Keys (number, string, date, scoped string)
+    try {
+        data = Parser::ParseFile(dir + "keys.txt");
+        ASSERT("number key", true, data.ContainsKey(10.0));
+        ASSERT("number key", "key1", (std::string) data.Get(10.0));
+        
+        ASSERT("string1 key", true, data.ContainsKey("string1"));
+        ASSERT("string1 key", "key2", (std::string) data.Get("string1"));
+        
+        // ASSERT("string2 key", true, data.ContainsKey("\"string2\""));
+        // ASSERT("string2 key", "key3", (std::string) data.Get("\"string2\""));
+        
+        ASSERT("date key", true, data.ContainsKey(Date(14, 8, 19)));
+        ASSERT("date key", "key4", (std::string) data.Get(Date(14, 8, 19)));
+        
+        ASSERT("scoped string key", true, data.ContainsKey(ScopedString("culture", "roman")));
+        ASSERT("scoped string key", "key6", (std::string) data.Get(ScopedString("culture", "roman")));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'keys.txt'\n{}", e.what()));
+    }
+    
     exit(0);
 }
