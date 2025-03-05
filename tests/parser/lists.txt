@@ -1,0 +1,5 @@
+character = {
+    trait = greedy
+    trait = compassionate
+    trait = brave
+}

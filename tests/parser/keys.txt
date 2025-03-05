@@ -1,0 +1,8 @@
+10 = key1
+
+string1 = key2
+# "string2" = key3
+
+14.8.19 = key4
+
+culture:roman = key6
