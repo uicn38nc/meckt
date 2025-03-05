@@ -610,6 +610,9 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
         if(token->Is(TokenType::NUMBER))
             return ParseList<double>(tokens);
         
+        if(token->Is(TokenType::BOOLEAN))
+            return ParseList<bool>(tokens);
+        
         if(token->Is(TokenType::IDENTIFIER) || token->Is(TokenType::STRING))
             return ParseList<std::string>(tokens);
             
@@ -763,7 +766,7 @@ bool Parser::Impl::IsList(std::deque<PToken>& tokens) {
     PToken firstToken = tokens.at(0);
     PToken secondToken = tokens.at(1);
 
-    #define IS_LIST_TYPE(t) (t->Is(TokenType::IDENTIFIER) || t->Is(TokenType::NUMBER) || t->Is(TokenType::STRING))
+    #define IS_LIST_TYPE(t) (t->Is(TokenType::IDENTIFIER) || t->Is(TokenType::NUMBER) || t->Is(TokenType::BOOLEAN) || t->Is(TokenType::STRING))
 
     // Check if two successive tokens are of the same type.
     // So, if there isn't any operators for the second tokens,
@@ -870,6 +873,17 @@ void Parser::Benchmark() {
 void Parser::Tests() {
     std::string dir = "tests/parser/";
     Parser::Node data;
+
+    const auto& SerializeList = [](const auto& l) {
+        return fmt::format(
+            "[{}]",
+            fmt::join(
+                std::views::transform(l, [](const auto& v) { return fmt::format("{}", v); }),
+                ", "
+            )
+        );
+    };
+
     #define ASSERT(name, expected, got) if(expected != got) throw std::runtime_error(fmt::format("Failed tests at line {} for {}, expected {}, got {}", __LINE__, name, expected, got))
 
     // Tests : Basic raw values (number, bool, string)
@@ -886,6 +900,21 @@ void Parser::Tests() {
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'basic_raw_values.txt'\n{}", e.what()));
+    }
+    
+    // Tests : Complex raw values (Date, Scoped String, Lists)
+    try {
+        data = Parser::ParseFile(dir + "complex_raw_values.txt");
+        ASSERT("date1", Date(14, 8, 19), (Date) data.Get("date1"));
+        ASSERT("date2", Date(1453, 5, 29), (Date) data.Get("date2"));
+        ASSERT("scoped string", ScopedString("culture", "roman"), (ScopedString) data.Get("culture"));
+        ASSERT("int list", "[100, 50, 200, -25]", SerializeList(data.Get<std::vector<double>>("int_list", {})));
+        ASSERT("double list", "[100.52, -50.99]", SerializeList(data.Get<std::vector<double>>("double_list", {})));
+        ASSERT("bool list", "[true, false, false, true]", SerializeList(data.Get<std::vector<bool>>("bool_list", {})));
+        ASSERT("string list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data.Get<std::vector<std::string>>("string_list", {})));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'complex_raw_values.txt'\n{}", e.what()));
     }
     
     exit(0);
