@@ -866,3 +866,27 @@ void Parser::Benchmark() {
         fmt::println("operators = {}", result.Get("operators"));
     }
 }
+
+void Parser::Tests() {
+    std::string dir = "tests/parser/";
+    Parser::Node data;
+    #define ASSERT(name, expected, got) if(expected != got) throw std::runtime_error(fmt::format("Failed tests at line {} for {}, expected {}, got {}", __LINE__, name, expected, got))
+
+    // Tests : Basic raw values (number, bool, string)
+    try {
+        data = Parser::ParseFile(dir + "basic_raw_values.txt");
+        ASSERT("int", 1234.0, (double) data.Get("i1"));
+        ASSERT("negative int", -1234.0, (double) data.Get("i2"));
+        ASSERT("double", 10.234, (double) data.Get("d1"));
+        ASSERT("negative double", -10.234, (double) data.Get("d2"));
+        ASSERT("bool true", true, (bool) data.Get("b_yes"));
+        ASSERT("bool false", false, (bool) data.Get("b_no"));
+        ASSERT("word", "Lorem", (std::string) data.Get("s1"));
+        ASSERT("string", "\"Lorem ipsum dolor sit amet\"", (std::string) data.Get("s2"));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'basic_raw_values.txt'\n{}", e.what()));
+    }
+    
+    exit(0);
+}

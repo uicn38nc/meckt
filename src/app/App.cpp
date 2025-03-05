@@ -3,6 +3,7 @@
 #include "menu/HomeMenu.hpp"
 #include "menu/EditorMenu.hpp"
 #include "menu/ImGuiStyle.hpp"
+#include "parser/Parser.hpp"
 
 #if _WIN32
 #include <windows.h>
@@ -21,7 +22,7 @@ SharedPtr<Mod> App::GetMod() {
 }
 
 void App::DebugSettings() {
-    this->OpenMod(MakeShared<Mod>("test_mod/"));
+    this->OpenMod(MakeShared<Mod>("test_hae/"));
 }
 
 void App::OpenMenu(UniquePtr<Menu> menu) {
@@ -59,6 +60,7 @@ void App::Init() {
 
 #ifdef DEBUG
     LOG_INFO("DEBUG_MODE is enabled", "");
+    Parser::Tests();
     this->DebugSettings();
 #elif _WIN32
     ShowWindow(GetConsoleWindow(), SW_HIDE);

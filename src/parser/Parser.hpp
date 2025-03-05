@@ -159,6 +159,7 @@ namespace Parser {
     }
 
     void Benchmark();
+    void Tests();
 }
 
 ///////////////////////////////////////////
@@ -258,11 +259,11 @@ public:
                 return fmt::format(
                     FMT_COMPILE("{} {} {}"),
                     p.first, // Key
-                    fmt::format("{}", p.second.first), // Operator
+                    p.second.first, // Operator
                     formatNode(p.second.second) // Value
                 );
             });
-            return fmt::format("{}{{ {} }}", std::string(node.GetDepth()-1, '\t'), fmt::join(v, " "));
+            return fmt::format("{}{{ {} }}", std::string(std::max((uint) 1, node.GetDepth())-1, '\t'), fmt::join(v, " "));
         }
         return fmt::format("{}", (Parser::RawValue&) node);
     }
@@ -283,9 +284,9 @@ public:
                     return formatNumbersList(p.first, p.second.second);
                 return fmt::format(
                     FMT_COMPILE("{}{} {} {}"),
-                    std::string(p.second.second.GetDepth()-1, '\t'), // Indentation
+                    std::string(std::max((uint) 1, p.second.second.GetDepth())-1, '\t'), // Indentation
                     p.first, // Key
-                    fmt::format("{}", p.second.first), // Operator
+                    p.second.first, // Operator
                     p.second.second // Value
                 );
             });
@@ -299,7 +300,7 @@ public:
     static std::string formatNumbersList(const Parser::Key& key, const Parser::Node& node) {
         std::vector<double> l = node;
         std::vector<double> loneNumbers;
-        std::string indent = std::string(node.GetDepth()-1, '\t');
+        std::string indent = std::string(std::max((uint) 1, node.GetDepth())-1, '\t');
 
         // Sort the list by ascending order.
         // Note: DO NOT sort the list because the order can matter (e.g colors).
