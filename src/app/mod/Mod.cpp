@@ -511,6 +511,8 @@ void Mod::LoadProvincesHistory() {
     std::set<std::string> filesPath = File::ListFiles(m_Dir + "/history/provinces/");
 
     for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".txt"))
+            continue;
         Parser::Node data = Parser::ParseFile(filePath);
         
         for(auto& [key, pair] : data.GetEntries()) {
@@ -542,6 +544,8 @@ void Mod::LoadTitlesHistory() {
     std::set<std::string> filesPath = File::ListFiles(m_Dir + "/history/titles/");
 
     for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".txt"))
+            continue;
         Parser::Node data = Parser::ParseFile(filePath);
         
         // 1. Loop over titles key in the file.
@@ -575,6 +579,8 @@ void Mod::LoadCultures() {
     std::set<std::string> filesPath = File::ListFiles(m_Dir + "/common/culture/cultures/");
 
     for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".txt"))
+            continue;
         try {
             Parser::Node data = Parser::ParseFile(filePath);
 
@@ -603,6 +609,8 @@ void Mod::LoadReligions() {
     // Faiths are defined within a religion, so we have to loop over every religion
     // keys, and then over every keys inside "faiths".
     for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".txt"))
+            continue;
         try {
             Parser::Node data = Parser::ParseFile(filePath);
 
@@ -641,6 +649,8 @@ void Mod::LoadTitles() {
         m_TitlesByType[(TitleType) i] = std::vector<SharedPtr<Title>>();
 
     for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".txt"))
+            continue;
         // fmt::println("loading titles from {}", filePath);
         Parser::Node data = Parser::ParseFile(filePath);
         std::vector<SharedPtr<Title>> titles = ParseTitles(filePath, data);
