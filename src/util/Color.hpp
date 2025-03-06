@@ -110,3 +110,16 @@ namespace sf {
 		}
 	};
 }
+
+template <>
+class fmt::formatter<sf::Color> {
+public:
+    constexpr auto parse(format_parse_context& ctx) {
+       return ctx.begin();
+    }
+
+    template <typename Context>
+    constexpr auto format(const sf::Color& color, Context& ctx) const {
+        return format_to(ctx.out(), "({}, {}, {}, {})", color.r, color.g, color.b, color.a);
+    }
+};
