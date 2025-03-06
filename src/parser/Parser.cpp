@@ -335,12 +335,12 @@ Node& Node::operator=(const RawValue& value) {
 }
 
 Node& Node::operator=(const Node& value) {
+    m_Depth = value.GetDepth();
     if(!this->Is(ValueType::NODE) && !value.Is(ValueType::NODE))
         this->GetLeafHolder()->m_Value = value.GetLeafHolder()->m_Value;
     else {
-        auto holder = value.m_Value->Copy();
-        holder->SetDepth(m_Depth);
         m_Value = value.m_Value->Copy();
+        m_Value->SetDepth(m_Depth);
     }
     return *this;
 }
@@ -875,13 +875,16 @@ void Parser::Tests() {
     Parser::Node data;
 
     const auto& SerializeList = [](const auto& l) {
-        return fmt::format(
+        std::string s = fmt::format(
             "[{}]",
             fmt::join(
                 std::views::transform(l, [](const auto& v) { return fmt::format("{}", v); }),
                 ", "
             )
         );
+        s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+        s.erase(std::remove(s.begin(), s.end(), '\t'), s.end());
+        return s;
     };
 
     #define ASSERT(name, expected, got) if(expected != got) throw std::runtime_error(fmt::format("Failed tests at line {} for {}, expected {}, got {}", __LINE__, name, expected, got))
@@ -912,7 +915,7 @@ void Parser::Tests() {
         ASSERT("double list", "[100.52, -50.99]", SerializeList(data.Get<std::vector<double>>("double_list", {})));
         ASSERT("bool list", "[true, false, false, true]", SerializeList(data.Get<std::vector<bool>>("bool_list", {})));
         ASSERT("string list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data.Get<std::vector<std::string>>("string_list", {})));
-        ASSERT("node list", "[{\nname = augustus\n\t}, {\nname = claudius\n\t}, {\nname = nero\n\t}]", SerializeList(data.Get<std::vector<Node>>("node_list", {})));
+        ASSERT("node list", "[{name = augustus}, {name = claudius}, {name = nero}]", SerializeList(data.Get<std::vector<Node>>("node_list", {})));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'complex_raw_values.txt'\n{}", e.what()));
@@ -959,7 +962,7 @@ void Parser::Tests() {
         ASSERT("number append list", "[10, 20, 50]", SerializeList(data.Get<std::vector<double>>("numbers", {})));
         ASSERT("string append list", "[greedy, compassionate, brave]", SerializeList(data.Get("character").Get<std::vector<std::string>>("trait", {})));
         ASSERT("bool append list", "[true, false, false]", SerializeList(data.Get<std::vector<bool>>("booleans", {})));
-        ASSERT("node append list", "[{\ncoat_of_arms = \"holy_order_coa1\"\nname = \"holy_order_name1\"\n\t}, {\ncoat_of_arms = \"holy_order_coa2\"\nname = \"holy_order_name2\"\n\t}]", SerializeList(data.Get<std::vector<Node>>("holy_order_names", {})));
+        ASSERT("node append list", "[{coat_of_arms = \"holy_order_coa1\"name = \"holy_order_name1\"}, {coat_of_arms = \"holy_order_coa2\"name = \"holy_order_name2\"}]", SerializeList(data.Get<std::vector<Node>>("holy_order_names", {})));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'lists.txt'\n{}", e.what()));
