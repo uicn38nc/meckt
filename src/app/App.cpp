@@ -22,7 +22,7 @@ SharedPtr<Mod> App::GetMod() {
 }
 
 void App::DebugSettings() {
-    this->OpenMod(MakeShared<Mod>("test_hae/"));
+    this->OpenMod(MakeShared<Mod>("tests/mods/test_hae/"));
 }
 
 void App::OpenMenu(UniquePtr<Menu> menu) {

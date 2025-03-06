@@ -5,6 +5,7 @@
 /test_*/
 /tmp/
 /vendor/sfml/
+/tests/mods/
 /*.txt
 imgui.ini
 *.zip
