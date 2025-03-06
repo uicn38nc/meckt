@@ -137,11 +137,11 @@ PToken Parser::ReadNumber(Reader& reader) {
 }
 
 PToken Parser::ReadIdentifier(Reader& reader) {
-    // An IDENTIFIER can have only have digits, letters, '.' and '_',
+    // An IDENTIFIER can have only have digits, letters, '.' and '_' and ''' and '-',
     // whereas a BOOLEAN is either 'yes' or 'no',
     // and a DATE is formatted as: yyyy.mm.dd
 
-    while(String::IsAlphaNumeric(reader.Peek()) || reader.Peek() == '.')
+    while(String::IsAlphaNumeric(reader.Peek()) || reader.Peek() == '.' || reader.Peek() == '\'' || reader.Peek() == '-')
         reader.Advance();
     std::string str = reader.End();
 

@@ -59,7 +59,7 @@ sf::Image Mod::GetCultureImage() {
                 }
             }
 
-            if(cultureName.empty()) {
+            if(cultureName.empty() || m_Cultures.count(cultureName) == 0) {
                 color = sf::Color(cultureName[0], cultureName[1], cultureName[2]);
             } 
             else {
@@ -107,7 +107,7 @@ sf::Image Mod::GetReligionImage() {
                 }
             }
 
-            if(m_Religions.count(religionName) == 0) {
+            if(m_Religions.count(religionName) == 0 || m_Religions.count(religionName) == 0) {
                 color = sf::Color(religionName[0], religionName[1], religionName[2]);
             } 
             else {

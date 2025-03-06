@@ -16,3 +16,6 @@ holy_order_names = {
 holy_order_names = {
     { name = "holy_order_name2" coat_of_arms = "holy_order_coa2" }
 }
+
+# Should ' be allowed in identifier?
+test = { Arzeaz Ab'eae abb' }

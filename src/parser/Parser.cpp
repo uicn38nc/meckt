@@ -517,7 +517,13 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                 
             case VALUE:
                 tokens.push_front(token);
-                Node node = ParseNode(tokens);
+                Node node;
+                try {
+                    node = ParseNode(tokens);
+                }
+                catch (std::exception& e) {
+                    throw std::runtime_error(fmt::format("Failed to parse value for key {}\n{}", key, e.what()));
+                }
 
                 if(values.ContainsKey(key)) {
                     Node& current = values[key];
@@ -963,6 +969,7 @@ void Parser::Tests() {
         ASSERT("string append list", "[greedy, compassionate, brave]", SerializeList(data.Get("character").Get<std::vector<std::string>>("trait", {})));
         ASSERT("bool append list", "[true, false, false]", SerializeList(data.Get<std::vector<bool>>("booleans", {})));
         ASSERT("node append list", "[{coat_of_arms = \"holy_order_coa1\"name = \"holy_order_name1\"}, {coat_of_arms = \"holy_order_coa2\"name = \"holy_order_name2\"}]", SerializeList(data.Get<std::vector<Node>>("holy_order_names", {})));
+        // fmt::println("{}", data.Get("test"));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'lists.txt'\n{}", e.what()));
@@ -1007,5 +1014,5 @@ void Parser::Tests() {
         throw std::runtime_error(fmt::format("Failed to parse 'ranges.txt'\n{}", e.what()));
     }
     
-    exit(0);
+    // exit(0);
 }
