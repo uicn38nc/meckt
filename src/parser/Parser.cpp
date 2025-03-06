@@ -15,7 +15,7 @@ Node::Node() :
 
 Node::Node(const Node& node) :
     m_Value((node.m_Value == nullptr) ? nullptr : node.m_Value->Copy()),
-    m_Depth(0)
+    m_Depth(node.GetDepth())
 {}
 
 Node::Node(const RawValue& value) : 
@@ -912,7 +912,7 @@ void Parser::Tests() {
         ASSERT("double list", "[100.52, -50.99]", SerializeList(data.Get<std::vector<double>>("double_list", {})));
         ASSERT("bool list", "[true, false, false, true]", SerializeList(data.Get<std::vector<bool>>("bool_list", {})));
         ASSERT("string list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data.Get<std::vector<std::string>>("string_list", {})));
-        ASSERT("node list", "[name = augustus, name = claudius, name = nero]", SerializeList(data.Get<std::vector<Node>>("node_list", {})));
+        ASSERT("node list", "[{\nname = augustus\n\t}, {\nname = claudius\n\t}, {\nname = nero\n\t}]", SerializeList(data.Get<std::vector<Node>>("node_list", {})));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'complex_raw_values.txt'\n{}", e.what()));
@@ -959,10 +959,24 @@ void Parser::Tests() {
         ASSERT("number append list", "[10, 20, 50]", SerializeList(data.Get<std::vector<double>>("numbers", {})));
         ASSERT("string append list", "[greedy, compassionate, brave]", SerializeList(data.Get("character").Get<std::vector<std::string>>("trait", {})));
         ASSERT("bool append list", "[true, false, false]", SerializeList(data.Get<std::vector<bool>>("booleans", {})));
-        ASSERT("node append list", "[coat_of_arms = \"holy_order_coa1\"\nname = \"holy_order_name1\", coat_of_arms = \"holy_order_coa2\"\nname = \"holy_order_name2\"]", SerializeList(data.Get<std::vector<Node>>("holy_order_names", {})));
+        ASSERT("node append list", "[{\ncoat_of_arms = \"holy_order_coa1\"\nname = \"holy_order_name1\"\n\t}, {\ncoat_of_arms = \"holy_order_coa2\"\nname = \"holy_order_name2\"\n\t}]", SerializeList(data.Get<std::vector<Node>>("holy_order_names", {})));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'lists.txt'\n{}", e.what()));
+    }
+    
+    // Tests : Depth
+    try {
+        data = Parser::ParseFile(dir + "depth.txt");
+        ASSERT("initial depth", 0, data.GetDepth());
+        ASSERT("depth 1", 1, data.Get("depth1").GetDepth());
+        ASSERT("depth 2", 2, data.Get("depth1").Get("depth2").GetDepth());
+        ASSERT("depth 3a", 3, data.Get("depth1").Get("depth2").Get("depth3a").GetDepth());
+        ASSERT("depth 3b", 3, data.Get("depth1").Get("depth2").Get("depth3b").GetDepth());
+        ASSERT("depth 4", 4, data.Get("depth1").Get("depth2").Get("depth3a").Get("depth4").GetDepth());
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'depth.txt'\n{}", e.what()));
     }
     
     exit(0);
