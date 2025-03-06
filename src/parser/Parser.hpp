@@ -224,12 +224,17 @@ public:
                 return format_to(ctx.out(), "{}", std::get<Date>(value));
             case Parser::ValueType::SCOPED_STRING:
                 return format_to(ctx.out(), "{}", std::get<ScopedString>(value));
-            case Parser::ValueType::NUMBER_LIST:
+            case Parser::ValueType::NUMBER_LIST: {
+                const std::vector<double>& numbers = std::get<std::vector<double>>(value);
+                if(isRange(numbers)) {
+                    return format_to(ctx.out(), "RANGE {{ {} {} }}", numbers[0], numbers[numbers.size()-1]);
+                }
                 return format_to(ctx.out(), "{{ {} }}", fmt::join(
-                    std::views::transform(std::get<std::vector<double>>(value), [](const auto& v) {
+                    std::views::transform(numbers, [](const auto& v) {
                         return fmt::format("{}", v);
                     }), " ")
                 );
+            }
             case Parser::ValueType::BOOL_LIST:
                 return format_to(ctx.out(), "{{ {} }}", fmt::join(
                     std::views::transform(std::get<std::vector<bool>>(value), [](const auto& v) {
@@ -266,6 +271,16 @@ public:
             return fmt::format("{}{{ {} }}", std::string(std::max((uint) 1, node.GetDepth())-1, '\t'), fmt::join(v, " "));
         }
         return fmt::format("{}", (Parser::RawValue&) node);
+    }
+
+    static bool isRange(const std::vector<double>& numbers) {
+        if(numbers.size() < 3)
+            return false;
+        for(int i = 1; i < numbers.size(); i++) {
+            if(numbers[i] != numbers[i-1]+1)
+                return false;
+        }
+        return true;
     }
 };
 
@@ -316,10 +331,9 @@ public:
             // Count the number of elements in the current range and make
             // a range only if there are at least 3 elements.
             int n = current - start;
-            bool isFollowingStreak = (current < l.size() && l[current-1]+1 == l[current]);
 
             // Push a new line if a streak is broken or if it is the last element of the vector.
-            if(!isFollowingStreak) {
+            if(current == l.size() || l[current-1]+1 != l[current]) {
                 if(n > 3) {
                     lines.push_back(fmt::format("RANGE {{ {}  {} }}", l[start], l[current-1]));
                 }

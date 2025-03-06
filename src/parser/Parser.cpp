@@ -998,8 +998,10 @@ void Parser::Tests() {
     try {
         data = Parser::ParseFile(dir + "ranges.txt");
         ASSERT("range list", "[1, 2, 3, 4, 5]", SerializeList(data.Get<std::vector<double>>("l1", {})));
+        ASSERT("transform to range", "RANGE { 1 5 }", fmt::format("{}", (const Node&) data.Get("l1")));
         ASSERT("concatenate list", "[1, 2, 3, 4, 5, 6, 7, 8]", SerializeList(data.Get<std::vector<double>>("l2", {})));
         ASSERT("transform to range", "RANGE { 1 8 }", fmt::format("{}", (const Node&) data.Get("l2")));
+        ASSERT("range list", "{\n\tl3 = RANGE { 5  11 }\n}", fmt::format("{}", (const Node&) data.Get("l3")));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'ranges.txt'\n{}", e.what()));
