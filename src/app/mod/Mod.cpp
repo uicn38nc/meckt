@@ -873,7 +873,7 @@ void Mod::ExportProvincesHistory() {
     std::map<std::string, std::ofstream> files;
 
     for(const auto& [id, province] : m_ProvincesByIds) {
-        if(!province->HasFlag(ProvinceFlags::LAND))
+        if(!province->HasFlag(ProvinceFlags::LAND) || province->HasFlag(ProvinceFlags::IMPASSABLE))
             continue;
         SharedPtr<Title> kingdomTitle = this->GetProvinceLiegeTitle(province, TitleType::KINGDOM);
         if(kingdomTitle == nullptr) {
