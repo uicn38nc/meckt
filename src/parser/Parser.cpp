@@ -982,5 +982,17 @@ void Parser::Tests() {
         throw std::runtime_error(fmt::format("Failed to parse 'depth.txt'\n{}", e.what()));
     }
     
+    // Tests : Colors
+    try {
+        data = Parser::ParseFile(dir + "colors.txt");
+        ASSERT("hsv1 color", sf::Color(77, 70, 61), (sf::Color) data.Get("c1"));
+        ASSERT("hsv2 color", sf::Color(225, 230, 207), (sf::Color) data.Get("c2"));
+        ASSERT("rgb1 color", sf::Color(153, 2, 34), (sf::Color) data.Get("c3"));
+        ASSERT("rgb2 color", sf::Color(23, 21, 99), (sf::Color) data.Get("c4"));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'colors.txt'\n{}", e.what()));
+    }
+    
     exit(0);
 }
