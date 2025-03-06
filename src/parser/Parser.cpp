@@ -943,7 +943,7 @@ void Parser::Tests() {
         throw std::runtime_error(fmt::format("Failed to parse 'keys.txt'\n{}", e.what()));
     }
 
-    // Tests : operators
+    // Tests : Operators
     try {
         data = Parser::ParseFile(dir + "operators.txt");
         ASSERT("eq operator", Parser::Operator::EQUAL, data.GetOperator("op1"));
@@ -992,6 +992,17 @@ void Parser::Tests() {
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'colors.txt'\n{}", e.what()));
+    }
+
+    // Tests : Ranges
+    try {
+        data = Parser::ParseFile(dir + "ranges.txt");
+        ASSERT("range list", "[1, 2, 3, 4, 5]", SerializeList(data.Get<std::vector<double>>("l1", {})));
+        ASSERT("concatenate list", "[1, 2, 3, 4, 5, 6, 7, 8]", SerializeList(data.Get<std::vector<double>>("l2", {})));
+        ASSERT("transform to range", "RANGE { 1 8 }", fmt::format("{}", (const Node&) data.Get("l2")));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'ranges.txt'\n{}", e.what()));
     }
     
     exit(0);
