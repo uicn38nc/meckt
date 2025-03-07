@@ -805,7 +805,7 @@ void Mod::ExportProvincesDefinition() {
 
     // The format of definition.csv is as following:
     // [ID];[RED];[GREEN];[BLUE];[Barony Name];x;
-    file << "0;0;0;0;x;x\n";
+    file << "0;0;0;0;x;x;\n";
 
     // "IDs must be sequential, or your game will crash."
     // That's why it is needed to make a sorted list of the provinces.
@@ -821,7 +821,7 @@ void Mod::ExportProvincesDefinition() {
 
     for(auto& [id, province] : m_ProvincesByIds) {
         fmt::println(file, 
-            "{};{};{};{};{};x",
+            "{};{};{};{};{};x;",
             province->GetId(),
             province->GetColor().r,
             province->GetColor().g,
