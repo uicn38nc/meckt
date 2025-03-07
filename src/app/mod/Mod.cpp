@@ -843,6 +843,7 @@ void Mod::ExportProvincesTerrain() {
     fmt::println(file, "default_land={}", TerrainToString(m_DefaultLandTerrain));
     fmt::println(file, "default_sea={}", TerrainToString(m_DefaultSeaTerrain));
     fmt::println(file, "default_coastal_sea={}", TerrainToString(m_DefaultCoastalSeaTerrain));
+    fmt::println(file, "\n");
 
     for(auto& [id, province] : m_ProvincesByIds) {
         if(!province->HasFlag(ProvinceFlags::LAND) || province->HasFlag(ProvinceFlags::IMPASSABLE))
