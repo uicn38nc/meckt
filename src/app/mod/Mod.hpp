@@ -47,7 +47,7 @@ public:
     void ExportTitles();
     void ExportTitlesHistory();
 
-    Parser::Node ExportTitle(const SharedPtr<Title>& title, int depth);
+    void ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int depth);
 
 private:
     std::string m_Dir;

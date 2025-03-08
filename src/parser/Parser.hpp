@@ -44,7 +44,7 @@ namespace Parser {
             bool IsList() const;
 
             uint GetDepth() const;
-            void SetDepth(uint depth);
+            void SetDepth(uint depth, bool updateChilds = true);
 
             // Functions to use with LeafHolder.
             void Push(const Node& node);

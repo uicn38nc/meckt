@@ -54,9 +54,10 @@ uint Node::GetDepth() const {
     return m_Depth;
 }
 
-void Node::SetDepth(uint depth) {
+void Node::SetDepth(uint depth, bool updateChilds) {
     m_Depth = depth;
-    m_Value->SetDepth(depth);
+    if(updateChilds)
+        m_Value->SetDepth(depth);
 }
 
 void Node::Push(const Node& node) {

@@ -952,8 +952,9 @@ void Mod::ExportTitles() {
             File::EncodeToUTF8BOM(files[filePath]);
         }
         std::ofstream& file = files[filePath];
-        Parser::Node data = this->ExportTitle(title, 1);
-        fmt::println(file, "{} = {}\n", title->GetName(), data);
+        fmt::println(file, "{} = {{", title->GetName());
+        this->ExportTitle(title, file, 1);
+        fmt::println(file, "}}\n");
     }
 
     for(auto& [key, file] : files)
@@ -1006,29 +1007,52 @@ void Mod::ExportTitlesHistory() {
         file.close();
 }
 
-Parser::Node Mod::ExportTitle(const SharedPtr<Title>& title, int depth) {
+void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int depth) {
+    std::string indent = std::string(depth, '\t');
     Parser::Node data = (title->GetOriginalData() == nullptr) ? Parser::Node() : *title->GetOriginalData();
-    
-    data.Put("color", title->GetColor());
+    data.SetDepth(depth);
+    data.SetDepth(0, false);
 
+    #define EXPORT_PROPERTIES(key, value) fmt::println(file, "{}{} = {}", indent, key, value)
+
+    EXPORT_PROPERTIES("color", fmt::format("{{ {} {} {} }}", title->GetColor().r, title->GetColor().g, title->GetColor().b));
+        
     if(title->Is(TitleType::BARONY)) {
         SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
-        data.Put("province", (double) baronyTitle->GetProvinceId());
+        EXPORT_PROPERTIES("province", baronyTitle->GetProvinceId());
+        // TODO: warning if there is no province with this id.
+
+        if(!data.GetKeys().empty())
+            fmt::println(file, "{}", data);
     }
     else {
         SharedPtr<HighTitle> highTitle = CastSharedPtr<HighTitle>(title);
 
+        // Raise an error if the main barony of a county does
+        // not have any holding type.
+        if(title->Is(TitleType::COUNTY) && !highTitle->GetDejureTitles().empty()) {
+            SharedPtr<BaronyTitle> vassalTitle = CastSharedPtr<BaronyTitle>(highTitle->GetDejureTitles().front());
+            if(m_ProvincesByIds.count(vassalTitle->GetProvinceId()) > 0) {
+                SharedPtr<Province> province = m_ProvincesByIds[vassalTitle->GetProvinceId()];
+                if(province->GetHolding() == ProvinceHolding::NONE) {
+                    LOG_ERROR("Capital barony {} of county {} does not have any holding", vassalTitle->GetName(), title->GetName());
+                }
+            }
+        }
+
         if(!title->Is(TitleType::COUNTY) && highTitle->GetCapitalTitle() != nullptr)
-            data.Put("capital", highTitle->GetCapitalTitle()->GetName());
-        
+            EXPORT_PROPERTIES("capital", highTitle->GetCapitalTitle()->GetName());
+            
         if(title->IsLandless())
-            data.Put("landless", true);
+            EXPORT_PROPERTIES("capital", "yes");
+
+        if(!data.GetKeys().empty())
+            fmt::println(file, "\n{}", data);
 
         for(const auto& dejureTitle : highTitle->GetDejureTitles()) {
-            data.Put(dejureTitle->GetName(), this->ExportTitle(dejureTitle, depth+1));
+            fmt::println(file, "\n{}{} = {{", indent, dejureTitle->GetName());
+            this->ExportTitle(dejureTitle, file, depth+1);
+            fmt::println(file, "{}}}", indent);
         }
     }
-
-    data.SetDepth(depth);
-    return data;
 }
