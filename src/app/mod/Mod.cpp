@@ -947,11 +947,13 @@ void Mod::ExportTitles() {
         std::string filePath = title->GetOriginalFilePath();
         if(filePath.empty())
             filePath = dir + "/01_landed_titles.txt";
-        if(files.count(filePath) == 0)
+        if(files.count(filePath) == 0) {
             files[filePath] = std::ofstream(filePath, std::ios::out);
+            File::EncodeToUTF8BOM(files[filePath]);
+        }
         std::ofstream& file = files[filePath];
         Parser::Node data = this->ExportTitle(title, 1);
-        fmt::println(file, "{} = {}", title->GetName(), data);
+        fmt::println(file, "{} = {}\n", title->GetName(), data);
     }
 
     for(auto& [key, file] : files)

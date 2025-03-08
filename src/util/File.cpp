@@ -40,3 +40,8 @@ std::vector<std::vector<std::string>> File::ReadCSV(const std::string& filePath)
     
     return lines;
 }
+
+void File::EncodeToUTF8BOM(std::ofstream& file) {
+    unsigned char bom[] = { 0xEF, 0xBB, 0xBF };
+    file.write(reinterpret_cast<char*>(bom), sizeof(bom));
+}
