@@ -347,7 +347,7 @@ public:
         }
 
         if(!loneNumbers.empty()) {
-            lines.push_back(fmt::format("{{ {} }}", fmt::join(
+            lines.push_back(fmt::format("LIST {{ {} }}", fmt::join(
                 std::views::transform(loneNumbers, [](const auto& v) {
                     return fmt::format("{}", v);
                 }), " ")

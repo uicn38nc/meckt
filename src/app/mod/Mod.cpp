@@ -767,36 +767,69 @@ void Mod::ExportDefaultMapFile() {
     // Read the file and keep all values except for the terrain flags
     // such as: sea_zones, impassable_seas, lakes, impassable_mountains, river_provinces
     Parser::Node data = Parser::ParseFile(m_Dir + "/map_data/default.map");
+    Parser::Node seaZonesData;
+    Parser::Node riverProvincesData;
+    Parser::Node lakesData;
+    Parser::Node impassableMountainsData;
+    Parser::Node impassableSeasData;
 
-    data.Put("sea_zones", Parser::Node(std::vector<double>()));
-    data.Put("impassable_seas", Parser::Node(std::vector<double>()));
-    data.Put("lakes", Parser::Node(std::vector<double>()));
-    data.Put("impassable_mountains", Parser::Node(std::vector<double>()));
-    data.Put("river_provinces", Parser::Node(std::vector<double>()));
+    seaZonesData.Put("sea_zones", Parser::Node(std::vector<double>()));
+    impassableSeasData.Put("impassable_seas", Parser::Node(std::vector<double>()));
+    riverProvincesData.Put("river_provinces", Parser::Node(std::vector<double>()));
+    lakesData.Put("lakes", Parser::Node(std::vector<double>()));
+    impassableMountainsData.Put("impassable_mountains", Parser::Node(std::vector<double>()));
 
-    // TODO: improve function to use range instead of giant list of ids.
+    // Remove those keys since they are printed seperately.
+    data.Remove("sea_zones");
+    data.Remove("impassable_seas");
+    data.Remove("river_provinces");
+    data.Remove("lakes");
+    data.Remove("impassable_mountains");
 
     for(const auto& [id, province] : m_ProvincesByIds) {
         if(province->HasFlag(ProvinceFlags::SEA)) {
-            data.Get("sea_zones").Push((double) id);
+            seaZonesData.Get("sea_zones").Push((double) id);
             if(province->HasFlag(ProvinceFlags::IMPASSABLE))
-                data.Get("impassable_seas").Push((double) id);
+                impassableSeasData.Get("impassable_seas").Push((double) id);
         }
         else if(province->HasFlag(ProvinceFlags::IMPASSABLE)) {
-                data.Get("impassable_mountains").Push((double) id);
+            impassableMountainsData.Get("impassable_mountains").Push((double) id);
         }
 
         if(province->HasFlag(ProvinceFlags::LAKE))
-            data.Get("lakes").Push((double) id);
+            lakesData.Get("lakes").Push((double) id);
             
         if(province->HasFlag(ProvinceFlags::RIVER))
-            data.Get("river_provinces").Push((double) id);
+            riverProvincesData.Get("river_provinces").Push((double) id);
     }
 
     // TODO: add error log if file can't be opened.
 
     std::ofstream file(m_Dir + "/map_data/default.map", std::ios::out);
-    fmt::println(file, "{}", data);
+
+    #define PRINT_DATA(key) fmt::println(file, "{} = {}", key, data.Get(key)); data.Remove(key)
+
+    PRINT_DATA("definitions");
+    PRINT_DATA("provinces");
+    PRINT_DATA("rivers");
+    PRINT_DATA("topology");
+    PRINT_DATA("continent");
+    PRINT_DATA("adjacencies");
+    PRINT_DATA("island_region");
+    PRINT_DATA("geographical_region");
+    PRINT_DATA("seasons");
+
+    fmt::println(
+        file, 
+        "\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}",
+        data,
+        seaZonesData,
+        impassableSeasData,
+        riverProvincesData,
+        lakesData,
+        impassableMountainsData
+    );
+
     file.close();
 }
 
