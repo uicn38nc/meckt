@@ -5,465 +5,663 @@ using namespace Parser;
 using namespace Parser::Impl;
 
 ////////////////////////////////
-//         Node class         //
+//        Object class        //
 ////////////////////////////////
 
-Node::Node() :
-    m_Value(MakeShared<NodeHolder>()),
-    m_Depth(0)
+Object::Object() :
+    m_Value(MakeShared<ObjectHolder>()),
+    m_Depth(0),
+    m_IsRoot(false)
 {}
 
-Node::Node(const Node& node) :
-    m_Value((node.m_Value == nullptr) ? nullptr : node.m_Value->Copy()),
-    m_Depth(node.GetDepth())
+Object::Object(const Object& object) :
+    m_Value((object.m_Value == nullptr) ? nullptr : object.m_Value->Copy()),
+    m_Depth(object.m_Depth),
+    m_IsRoot(false)
 {}
 
-Node::Node(const RawValue& value) : 
-    m_Value(MakeShared<LeafHolder>(value)),
-    m_Depth(0)
+Object::Object(const Scalar& value) : 
+    m_Value(MakeShared<ScalarHolder>(value)),
+    m_Depth(0),
+    m_IsRoot(false)
 {}
 
-Node::Node(const sf::Color& color) : 
-    m_Value(MakeShared<LeafHolder>(std::vector<double>{(double) color.r, (double) color.g, (double) color.b})), 
-    m_Depth(0)
+Object::Object(const Array& value) : 
+    m_Value(MakeShared<ArrayHolder>(value)),
+    m_Depth(0),
+    m_IsRoot(false)
 {}
 
-Node::Node(const std::map<Key, std::pair<Operator, Node>>& values) :
-    m_Value(MakeShared<NodeHolder>(values)),
-    m_Depth(0)
+Object::Object(const std::vector<SharedPtr<Object>>& value) : 
+    m_Value(MakeShared<ArrayHolder>(value)),
+    m_Depth(0),
+    m_IsRoot(false)
 {}
 
-ValueType Node::GetType() const {
+Object::Object(const sf::Color& color) : 
+    m_Value(MakeShared<ArrayHolder>(std::vector<int>{(int) color.r, (int) color.g, (int) color.b})), 
+    m_Depth(0),
+    m_IsRoot(false)
+{}
+
+ObjectType Object::GetType() const {
     return m_Value->GetType();
 }
 
-bool Node::Is(ValueType type) const {
+ObjectType Object::GetArrayType() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::GetArrayType' on scalar or object.");
+    return this->GetArrayHolder()->GetArrayType();
+}
+
+bool Object::Is(ObjectType type) const {
     return this->GetType() == type;
 }
 
-bool Node::IsList() const {
-    ValueType t = this->GetType();
-    return (t == ValueType::NUMBER_LIST)
-        || (t == ValueType::BOOL_LIST)
-        || (t == ValueType::STRING_LIST)
-        || (t == ValueType::NODE_LIST);
-
-}
-
-uint Node::GetDepth() const {
+uint Object::GetDepth() const {
     return m_Depth;
 }
 
-void Node::SetDepth(uint depth, bool updateChilds) {
+void Object::SetDepth(uint depth) {
     m_Depth = depth;
-    if(updateChilds)
-        m_Value->SetDepth(depth);
+    m_Value->SetDepth(depth);
 }
 
-void Node::Push(const Node& node) {
-    this->Push(std::vector<Node>{node});
+bool Object::IsRoot() const {
+    return m_IsRoot;
 }
 
-void Node::Push(const RawValue& value) {
-    if(this->GetType() == ValueType::NODE)
-        throw std::runtime_error("error: invalid use of 'Node::Push' on non-leaf node.");
-    
-    auto holder = this->GetLeafHolder();
+void Object::SetRoot(bool isRoot) {
+    m_IsRoot = isRoot;
+}
 
-    #define CreateList(T) holder->m_Value = std::vector<T>{std::get<T>(holder->m_Value)};
-
-    // Check if the value to push into the list
-    // is a single value or another list.
-    #define PushToList(T) \
-        if(value.index() < 3) { \
-            std::get<std::vector<T>>(holder->m_Value).push_back(std::get<T>(value)); \
-        } \
-        else { \
-            for(const auto& v : std::get<std::vector<T>>(value)) \
-                std::get<std::vector<T>>(holder->m_Value).push_back(v); \
-        } \
-        
-    #define PushToNodeList() \
-        for(const auto& v : std::get<std::vector<Node>>(value)) \
-            std::get<std::vector<Node>>(holder->m_Value).push_back(v); \
-
-    switch(this->GetType()) {
-        case ValueType::NUMBER:
-            CreateList(double);
-            PushToList(double);
-            break;
-        case ValueType::BOOL:
-            CreateList(bool);
-            PushToList(bool);
-            break;
-        case ValueType::STRING:
-            CreateList(std::string);
-            PushToList(std::string);
-            break;
-        case ValueType::NUMBER_LIST:
-            PushToList(double);
-            break;
-        case ValueType::BOOL_LIST:
-            PushToList(bool);
-            break;
-        case ValueType::STRING_LIST:
-            PushToList(std::string);
-            break;
-        case ValueType::NODE_LIST:
-            PushToNodeList();
-            break;
-        default:
-            break;
+void Object::ConvertToArray() {
+    if(this->Is(ObjectType::ARRAY)) {
+        return;
     }
-}
-
-void Node::Merge(const Node& node) {
-    if(this->GetType() != ValueType::NODE)
-        throw std::runtime_error("error: invalid use of 'Node::Merge' on leaf node.");
-    if(node.GetType() != ValueType::NODE)
-        throw std::runtime_error("error: invalid use of 'Node::Merge' with leaf node.");
-    for(auto& [key, pair] : this->GetNodeHolder()->m_Values) {
-        this->Put(key, pair.second, pair.first);
-    }
-}
-
-Node& Node::Get(const Key& key) {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::Get' on leaf node.");
-    return this->GetNodeHolder()->m_Values[key].second;
-}
-
-const Node& Node::Get(const Key& key) const {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::Get' on leaf node.");
-    return this->GetNodeHolder()->m_Values[key].second;
-}
-
-template <typename T>
-T Node::Get(const Key& key, T defaultValue) const {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::Get' on leaf node.");
-    auto it = this->GetNodeHolder()->m_Values.find(key);
-    if(it == this->GetNodeHolder()->m_Values.end())
-        return defaultValue;
-    return it->second.second;
-}
-
-template int Node::Get<int>(const Key&, int) const;
-template double Node::Get<double>(const Key&, double) const;
-template bool Node::Get<bool>(const Key&, bool) const;
-template std::string Node::Get<std::string>(const Key&, std::string) const;
-template Date Node::Get<Date>(const Key&, Date) const;
-template ScopedString Node::Get<ScopedString>(const Key&, ScopedString) const;
-template std::vector<double> Node::Get<std::vector<double>>(const Key&, std::vector<double>) const;
-template std::vector<bool> Node::Get<std::vector<bool>>(const Key&, std::vector<bool>) const;
-template std::vector<std::string> Node::Get<std::vector<std::string>>(const Key&, std::vector<std::string>) const;
-template std::vector<Node> Node::Get<std::vector<Node>>(const Key&, std::vector<Node>) const;
-template RawValue Node::Get<RawValue>(const Key&, RawValue) const;
-template Key Node::Get<Key>(const Key&, Key) const;
-template sf::Color Node::Get<sf::Color>(const Key&, sf::Color) const;
-
-Operator Node::GetOperator(const Key& key) {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::GetOperator' on leaf node.");
-    return this->GetNodeHolder()->m_Values[key].first;
-}
-
-std::map<Key, std::pair<Operator, Node>>& Node::GetEntries() {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::GetEntries' on leaf node.");
-    return this->GetNodeHolder()->m_Values;
-}
-
-const std::map<Key, std::pair<Operator, Node>>& Node::GetEntries() const {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::GetEntries' on leaf node.");
-    return this->GetNodeHolder()->m_Values;
-}
-
-std::vector<Key> Node::GetKeys() const {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::GetKeys' on leaf node.");
     
-    std::vector<Key> keys;
-    auto holder = this->GetNodeHolder();
-    for(const auto& [key, pair] : holder->m_Values)
-        keys.push_back(key);
-
-    return keys;
-}
-
-bool Node::ContainsKey(const Key& key) const{
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::ContainsKey' on leaf node.");
-    return this->GetNodeHolder()->m_Values.count(key) > 0;
-}
-
-void Node::Put(const Key& key, const Node& node, Operator op) {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::Put' on leaf node.");
-    this->GetNodeHolder()->m_Values[key] = std::make_pair(op, node);
-    this->GetNodeHolder()->m_Values[key].second.SetDepth(m_Depth + 1);
-}
-
-void Node::Put(const Key& key, const RawValue& value, Operator op) {
-    this->Put(key, Node(value), op);
-}
-
-void Node::Put(const Key& key, const sf::Color& color, Operator op) {
-    this->Put(key, Node(color), op);
-}
-
-Node Node::Remove(const Key& key) {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'Node::Remove' on leaf node.");
-    Node value = std::move(this->GetNodeHolder()->m_Values[key].second);
-    this->GetNodeHolder()->m_Values.erase(key);
-    return value;
-}
-
-Node::operator int() const {
-    if(!this->Is(ValueType::NUMBER))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'int'");
-    return (int) std::get<double>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator double() const {
-    if(!this->Is(ValueType::NUMBER))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'double'");
-    return std::get<double>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator bool() const {
-    if(!this->Is(ValueType::BOOL))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'bool'");
-    return std::get<bool>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator std::string() const {
-    if(!this->Is(ValueType::STRING))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'std::string'");
-    return std::get<std::string>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator Date() const {
-    if(!this->Is(ValueType::DATE))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'Date'");
-    return std::get<Date>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator ScopedString() const {
-    if(!this->Is(ValueType::SCOPED_STRING))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'ScopedString'");
-    return std::get<ScopedString>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator std::vector<double>&() const {
-    if(!this->Is(ValueType::NUMBER_LIST))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'std::vector<double>&'");
-    return std::get<std::vector<double>>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator std::vector<bool>&() const {
-    if(!this->Is(ValueType::BOOL_LIST))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'std::vector<bool>&'");
-    return std::get<std::vector<bool>>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator std::vector<std::string>&() const {
-    if(!this->Is(ValueType::STRING_LIST))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'std::vector<std::string>&'");
-    return std::get<std::vector<std::string>>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator std::vector<Node>&() const {
-    if(!this->Is(ValueType::NODE_LIST))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'std::vector<Node>&'");
-    return std::get<std::vector<Node>>(this->GetLeafHolder()->m_Value);
-}
-
-Node::operator RawValue&() const {
-    if(this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'RawValue&'");
-    return this->GetLeafHolder()->m_Value;
-}
-
-Node::operator Key() const {
-    switch(this->GetType()) {
-        case ValueType::NUMBER:
-            return std::get<double>(this->GetLeafHolder()->m_Value);
-        case ValueType::STRING:
-            return std::get<std::string>(this->GetLeafHolder()->m_Value);
-        case ValueType::DATE:
-            return std::get<Date>(this->GetLeafHolder()->m_Value);
-        case ValueType::SCOPED_STRING:
-            return std::get<ScopedString>(this->GetLeafHolder()->m_Value);
-        default:
-            throw std::runtime_error("error: invalid cast from 'node' to type 'Key'");
+    if(this->Is(ObjectType::OBJECT)) {
+        // Create a new object and add the values to it
+        // then convert the current object to an array
+        // with the new object as the only element.
+        auto values = this->GetObjectHolder()->m_Values;
+        SharedPtr<Object> object = MakeShared<Object>();
+        object->GetObjectHolder()->m_Values = values;
+        m_Value = MakeShared<ArrayHolder>(std::vector<SharedPtr<Object>>{object});
     }
-}
-
-Node::operator sf::Color() const {
-    if(!this->Is(ValueType::NUMBER_LIST))
-        throw std::runtime_error("error: invalid cast from 'node' to type 'sf::Color&'");
-    
-    std::vector<double> values = std::get<std::vector<double>>(this->GetLeafHolder()->m_Value);
-    
-    if(values.size() < 3)
-        throw std::runtime_error("error: invalid cast from 'node' to type 'sf::Color&'");
-
-    // Check if the numbers are float between 0 and 1.
-    // If so, then parse the list as an HSV color code.
-    // TODO: Fix issues where it is parsed as HSV for low RGB values.
-    if((values[0] >= 0.0 && values[0] <= 1.0)
-    && (values[1] >= 0.0 && values[1] <= 1.0)
-    && (values[2] >= 0.0 && values[2] <= 1.0)) {
-        float h = std::min(values[0] * 360, 359.99);
-        float s = std::min(values[1], 0.99);
-        float v = std::min(values[2], 0.99);
-        return sf::HSVColor(h, s, v).toRgb();
-    }
-
-    return sf::Color((int) values[0], (int) values[1], (int) values[2]);
-}
-
-Node& Node::operator=(const RawValue& value) {
-    if(this->GetType() == ValueType::NODE)
-        m_Value = MakeShared<LeafHolder>(value);
-    else
-        this->GetLeafHolder()->m_Value = value;
-    return *this;
-}
-
-Node& Node::operator=(const Node& value) {
-    m_Depth = value.GetDepth();
-    if(!this->Is(ValueType::NODE) && !value.Is(ValueType::NODE))
-        this->GetLeafHolder()->m_Value = value.GetLeafHolder()->m_Value;
     else {
-        m_Value = value.m_Value->Copy();
-        m_Value->SetDepth(m_Depth);
-    }
-    return *this;
-}
-
-Node& Node::operator [](const Key& key) {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'operator[]' on leaf node.");
-    return this->Get(key);
-}
-
-const Node& Node::operator [](const Key& key) const {
-    if(!this->Is(ValueType::NODE))
-        throw std::runtime_error("error: invalid use of 'operator[] const' on leaf node.");
-    return this->Get(key);
-}
-
-SharedPtr<LeafHolder> Node::GetLeafHolder() {
-    return std::dynamic_pointer_cast<LeafHolder>(m_Value);
-}
-
-const SharedPtr<LeafHolder> Node::GetLeafHolder() const {
-    return std::dynamic_pointer_cast<LeafHolder>(m_Value);
-}
-
-SharedPtr<NodeHolder> Node::GetNodeHolder() {
-    return std::dynamic_pointer_cast<NodeHolder>(m_Value);
-}
-
-const SharedPtr<NodeHolder> Node::GetNodeHolder() const {
-    return std::dynamic_pointer_cast<NodeHolder>(m_Value);
-}
-
-////////////////////////////////
-//      NodeHolder class      //
-////////////////////////////////
-
-
-NodeHolder::NodeHolder() {
-
-}
-
-NodeHolder::NodeHolder(const NodeHolder& n) {
-    for(auto [key, pair] : n.m_Values) {
-        m_Values[key] = *(&pair);
-    }
-}
-
-NodeHolder::NodeHolder(const std::map<Key, std::pair<Operator, Node>>& values) {
-    m_Values = values;
-}
-
-ValueType NodeHolder::GetType() const {
-    return ValueType::NODE;
-}
-
-SharedPtr<AbstractValueHolder> NodeHolder::Copy() const {
-    SharedPtr<NodeHolder> copy = MakeShared<NodeHolder>();
-    for(const auto&[key, pair] : m_Values) {
-        copy->m_Values[key] = *(&pair);
-    }
-    return copy;
-}
-
-void NodeHolder::SetDepth(uint depth) {
-    for(auto& [key, pair] : m_Values)
-        pair.second.SetDepth(depth + 1);
-}
-
-////////////////////////////////
-//      LeafHolder class      //
-////////////////////////////////
-
-LeafHolder::LeafHolder() : m_Value(0.0) {}
-
-LeafHolder::LeafHolder(const LeafHolder& l) : m_Value(l.m_Value) {}
-
-LeafHolder::LeafHolder(const RawValue& value) : m_Value(value) {}
-
-ValueType LeafHolder::GetType() const {
-    return (ValueType) m_Value.index();
-}
-
-SharedPtr<AbstractValueHolder> LeafHolder::Copy() const {
-    SharedPtr<LeafHolder> copy = MakeShared<LeafHolder>();
-    copy->m_Value = m_Value;
-    return copy;
-}
-
-void LeafHolder::SetDepth(uint depth) {
-    if(this->GetType() == ValueType::NODE_LIST) {
-        std::vector<Node>& nodes = std::get<std::vector<Node>>(m_Value);
-        for(Node& node : nodes) {
-            node.SetDepth(depth+1);
+        Scalar value = this->GetScalarHolder()->m_Value;
+        #define AS_ARRAY(T) m_Value = MakeShared<ArrayHolder>(std::vector<T>{std::get<T>(value)}); break
+        switch((ObjectType) value.index()) {
+            case ObjectType::INT: AS_ARRAY(int);
+            case ObjectType::DECIMAL: AS_ARRAY(double);
+            case ObjectType::BOOL: AS_ARRAY(bool);
+            case ObjectType::STRING: AS_ARRAY(std::string);
+            case ObjectType::DATE: AS_ARRAY(Date);
+            case ObjectType::SCOPED_STRING: AS_ARRAY(ScopedString);
+            default: break;
         }
     }
 }
 
-Node Parser::ParseFile(const std::string& filePath) {
+void Object::Push(const SharedPtr<Object>& object) {
+    this->Push(std::vector<SharedPtr<Object>>{object});
+}
+
+void Object::Push(const Scalar& scalar) {
+    #define PushAsArray(T) this->Push(std::vector<T>{std::get<T>(scalar)}); break
+
+    switch((ObjectType) scalar.index()) {
+        case ObjectType::INT: PushAsArray(int);
+        case ObjectType::DECIMAL: PushAsArray(double);
+        case ObjectType::BOOL: PushAsArray(bool);
+        case ObjectType::STRING: PushAsArray(std::string);
+        case ObjectType::DATE: PushAsArray(Date);
+        case ObjectType::SCOPED_STRING: PushAsArray(ScopedString);
+        default: break;
+    }
+}
+
+void Object::Push(const Array& array) {
+    if(!this->Is(ObjectType::ARRAY)) {
+        this->ConvertToArray();
+    }
+
+    auto holder = this->GetArrayHolder();
+
+    #define MergeArrays(T) { \
+        if((int) holder->GetArrayType() != array.index()) \
+            throw std::runtime_error(fmt::format(FMT_COMPILE("error: cannot merge {} array into {} array."), #T, (int) holder->GetArrayType())); \
+        auto& target = std::get<std::vector<T>>(holder->m_Values); \
+        target.reserve(target.size() + std::get<std::vector<T>>(array).size()); \
+        for(const auto& v : std::get<std::vector<T>>(array)) \
+            target.push_back(v); \
+    } break
+    
+    // TODO: handle array of arrays.
+    switch((ObjectType) array.index()) {
+        case ObjectType::INT: MergeArrays(int);
+        case ObjectType::DECIMAL: MergeArrays(double);
+        case ObjectType::BOOL: MergeArrays(bool);
+        case ObjectType::STRING: MergeArrays(std::string);
+        case ObjectType::DATE: MergeArrays(Date);
+        case ObjectType::SCOPED_STRING: MergeArrays(ScopedString);
+        case ObjectType::OBJECT: MergeArrays(SharedPtr<Object>);
+        default: break;
+    } 
+}
+
+void Object::Merge(const SharedPtr<Object>& object) {
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Merge' on scalar.");
+    if(!object->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Merge' with scalar.");
+
+    for(auto& [key, pair] : object->GetObjectHolder()->m_Values) {
+        this->Put(key, pair.second, pair.first);
+    }
+}
+
+template <typename T>
+T Object::Get(const Scalar& key) const {
+    if(this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on array.");
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on scalar.");
+    return (T) (*this->GetObjectHolder()->m_Values[key].second);
+}
+
+template <>
+SharedPtr<Object> Object::Get<SharedPtr<Object>>(const Scalar& key) const {
+    if(this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on array.");
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on scalar.");
+    return this->GetObjectHolder()->m_Values[key].second;
+}
+
+template int Object::Get<int>(const Scalar&) const;
+template double Object::Get<double>(const Scalar&) const;
+template bool Object::Get<bool>(const Scalar&) const;
+template std::string Object::Get<std::string>(const Scalar&) const;
+template Date Object::Get<Date>(const Scalar&) const;
+template ScopedString Object::Get<ScopedString>(const Scalar&) const;
+template Scalar Object::Get<Scalar>(const Scalar&) const;
+template sf::Color Object::Get<sf::Color>(const Scalar&) const;
+
+template <typename T>
+T Object::Get(const Scalar& key, T defaultValue) const {
+    if(this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on array.");
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on scalar.");
+    auto it = this->GetObjectHolder()->m_Values.find(key);
+    if(it == this->GetObjectHolder()->m_Values.end())
+        return defaultValue;
+    return (T) (*(it->second.second));
+}
+
+template <>
+SharedPtr<Object> Object::Get<SharedPtr<Object>>(const Scalar& key, SharedPtr<Object> defaultValue) const {
+    if(this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on array.");
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Get' on scalar.");
+    auto it = this->GetObjectHolder()->m_Values.find(key);
+    if(it == this->GetObjectHolder()->m_Values.end())
+        return defaultValue;
+    return this->GetObjectHolder()->m_Values[key].second;
+}
+
+template int Object::Get<int>(const Scalar&, int) const;
+template double Object::Get<double>(const Scalar&, double) const;
+template bool Object::Get<bool>(const Scalar&, bool) const;
+template std::string Object::Get<std::string>(const Scalar&, std::string) const;
+template Date Object::Get<Date>(const Scalar&, Date) const;
+template ScopedString Object::Get<ScopedString>(const Scalar&, ScopedString) const;
+template SharedPtr<Object> Object::Get<SharedPtr<Object>>(const Scalar&, SharedPtr<Object>) const;
+template Scalar Object::Get<Scalar>(const Scalar&, Scalar) const;
+template sf::Color Object::Get<sf::Color>(const Scalar&, sf::Color) const;
+
+template <typename T>
+std::vector<T> Object::GetArray(const Scalar& key) const {
+    if(this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::GetArray' on array.");
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::GetArray' on scalar.");
+    auto it = this->GetObjectHolder()->m_Values.find(key);
+    if(!it->second.second->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::GetArray' on scalar or object.");
+    return std::get<std::vector<T>>(it->second.second->GetArrayHolder()->m_Values);
+}
+
+template std::vector<int> Object::GetArray<int>(const Scalar&) const;
+template std::vector<double> Object::GetArray<double>(const Scalar&) const;
+template std::vector<bool> Object::GetArray<bool>(const Scalar&) const;
+template std::vector<std::string> Object::GetArray<std::string>(const Scalar&) const;
+template std::vector<Date> Object::GetArray<Date>(const Scalar&) const;
+template std::vector<ScopedString> Object::GetArray<ScopedString>(const Scalar&) const;
+template std::vector<SharedPtr<Object>> Object::GetArray<SharedPtr<Object>>(const Scalar&) const;
+
+template <typename T>
+std::vector<T> Object::GetArray(const Scalar& key, std::vector<T> defaultValue) const {
+    if(this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::GetArray' on array.");
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::GetArray' on scalar.");
+    auto it = this->GetObjectHolder()->m_Values.find(key);
+    if(it == this->GetObjectHolder()->m_Values.end())
+        return defaultValue;
+    if(!it->second.second->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::GetArray' on scalar or object.");
+    return std::get<std::vector<T>>(it->second.second->GetArrayHolder()->m_Values);
+}
+
+template std::vector<int> Object::GetArray<int>(const Scalar&, std::vector<int>) const;
+template std::vector<double> Object::GetArray<double>(const Scalar&, std::vector<double>) const;
+template std::vector<bool> Object::GetArray<bool>(const Scalar&, std::vector<bool>) const;
+template std::vector<std::string> Object::GetArray<std::string>(const Scalar&, std::vector<std::string>) const;
+template std::vector<Date> Object::GetArray<Date>(const Scalar&, std::vector<Date>) const;
+template std::vector<ScopedString> Object::GetArray<ScopedString>(const Scalar&, std::vector<ScopedString>) const;
+template std::vector<SharedPtr<Object>> Object::GetArray<SharedPtr<Object>>(const Scalar&, std::vector<SharedPtr<Object>>) const;
+
+SharedPtr<Object> Object::GetObject(const Scalar& key) const {
+    return this->Get<SharedPtr<Object>>(key);
+}
+
+Operator Object::GetOperator(const Scalar& key) {
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::GetOperator' on scalar or array.");
+    return this->GetObjectHolder()->m_Values[key].first;
+}
+
+OrderedMap<Scalar, std::pair<Operator, SharedPtr<Object>>>& Object::GetEntries() {
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::GetEntries' on scalar or array.");
+    return this->GetObjectHolder()->m_Values;
+}
+
+const OrderedMap<Scalar, std::pair<Operator, SharedPtr<Object>>>& Object::GetEntries() const {
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::GetEntries' on scalar or array.");
+    return this->GetObjectHolder()->m_Values;
+}
+
+std::vector<Scalar> Object::GetKeys() const {
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::GetKeys' on scalar or array.");
+    return this->GetObjectHolder()->m_Values.keys();
+}
+
+bool Object::ContainsKey(const Scalar& key) const{
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::ContainsKey' on scalar or array.");
+    return this->GetObjectHolder()->m_Values.contains(key);
+}
+
+void Object::Put(const Scalar& key, const SharedPtr<Object>& value, Operator op) {
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Put' on scalar or array.");
+    this->GetObjectHolder()->m_Values.insert(key, std::make_pair(op, value));
+    this->GetObjectHolder()->m_Values[key].second->SetDepth(m_Depth + 1);
+}
+
+void Object::Put(const Scalar& key, const Scalar& value, Operator op) {
+    this->Put(key, MakeShared<Object>(value), op);
+}
+
+void Object::Put(const Scalar& key, const Array& value, Operator op) {
+    this->Put(key, MakeShared<Object>(value), op);
+}
+
+void Object::Put(const Scalar& key, const sf::Color& value, Operator op) {
+    this->Put(key, MakeShared<Object>(value), op);
+}
+
+SharedPtr<Object> Object::Remove(const Scalar& key) {
+    if(!this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid use of 'Object::Remove' on scalar or array.");
+    SharedPtr<Object> value = std::move(this->GetObjectHolder()->m_Values[key].second);
+    this->GetObjectHolder()->m_Values.erase(key);
+    return value;
+}
+
+Scalar& Object::AsScalar() {
+    if(this->Is(ObjectType::OBJECT) || this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::AsScalar' on object or array.");
+    return this->GetScalarHolder()->m_Value;
+}
+
+Scalar Object::AsScalar() const {
+    if(this->Is(ObjectType::OBJECT) || this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::AsScalar' on object or array.");
+    return this->GetScalarHolder()->m_Value;
+}
+
+Object::operator int() const {
+    if(!this->Is(ObjectType::INT))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'int'");
+    return std::get<int>(this->GetScalarHolder()->m_Value);
+}
+
+Object::operator double() const {
+    if(!this->Is(ObjectType::DECIMAL))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'decimal'");
+    return std::get<double>(this->GetScalarHolder()->m_Value);
+}
+
+Object::operator bool() const {
+    if(!this->Is(ObjectType::BOOL))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'bool'");
+    return std::get<bool>(this->GetScalarHolder()->m_Value);
+}
+
+Object::operator std::string() const {
+    if(!this->Is(ObjectType::STRING))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::string'");
+    return std::get<std::string>(this->GetScalarHolder()->m_Value);
+}
+
+Object::operator Date() const {
+    if(!this->Is(ObjectType::DATE))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'Date'");
+    return std::get<Date>(this->GetScalarHolder()->m_Value);
+}
+
+Object::operator ScopedString() const {
+    if(!this->Is(ObjectType::SCOPED_STRING))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'ScopedString'");
+    return std::get<ScopedString>(this->GetScalarHolder()->m_Value);
+}
+
+Object::operator Scalar() const {
+    if(this->Is(ObjectType::ARRAY) || this->Is(ObjectType::OBJECT))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'Scalar'");
+    return this->GetScalarHolder()->m_Value;
+}
+
+Array& Object::AsArray() {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::AsArray' on scalar or object.");
+    return this->GetArrayHolder()->m_Values;
+}
+
+const Array& Object::AsArray() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid use of 'Object::AsArray' on scalar or object.");
+    return this->GetArrayHolder()->m_Values;
+}
+
+Object::operator std::vector<int>&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<int>&'");
+    if(this->GetArrayHolder()->GetArrayType() != ObjectType::INT)
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<int>&'");
+    return std::get<std::vector<int>>(this->GetArrayHolder()->m_Values);
+}
+
+Object::operator std::vector<double>&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<double>&'");
+    if(this->GetArrayHolder()->GetArrayType() != ObjectType::DECIMAL)
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<double>&'");
+    return std::get<std::vector<double>>(this->GetArrayHolder()->m_Values);
+}
+
+Object::operator std::vector<bool>&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<bool>&'");
+    if(this->GetArrayHolder()->GetArrayType() != ObjectType::BOOL)
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<bool>&'");
+    return std::get<std::vector<bool>>(this->GetArrayHolder()->m_Values);
+}
+
+Object::operator std::vector<std::string>&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<std::string>&'");
+    if(this->GetArrayHolder()->GetArrayType() != ObjectType::STRING)
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<std::string>&'");
+    return std::get<std::vector<std::string>>(this->GetArrayHolder()->m_Values);
+}
+
+Object::operator std::vector<Date>&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<Date>&'");
+    if(this->GetArrayHolder()->GetArrayType() != ObjectType::DATE)
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<Date>&'");
+    return std::get<std::vector<Date>>(this->GetArrayHolder()->m_Values);
+}
+
+Object::operator std::vector<ScopedString>&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<ScopedString>&'");
+    if(this->GetArrayHolder()->GetArrayType() != ObjectType::SCOPED_STRING)
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<ScopedString>&'");
+    return std::get<std::vector<ScopedString>>(this->GetArrayHolder()->m_Values);
+}
+
+Object::operator std::vector<SharedPtr<Object>>&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<SharedPtr<Object>>&'");
+    if(this->GetArrayHolder()->GetArrayType() != ObjectType::OBJECT)
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'std::vector<SharedPtr<Object>>&'");
+    return std::get<std::vector<SharedPtr<Object>>>(this->GetArrayHolder()->m_Values);
+}
+
+Object::operator Array&() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'Array&'");
+    return this->GetArrayHolder()->m_Values;
+}
+
+Object::operator sf::Color() const {
+    if(!this->Is(ObjectType::ARRAY))
+        throw std::runtime_error("error: invalid cast from 'Object' to type 'sf::Color'");
+
+    if(this->GetArrayHolder()->GetArrayType() == ObjectType::INT) {
+        std::vector<int> values = std::get<std::vector<int>>(this->GetArrayHolder()->m_Values);
+        if(values.size() < 3)
+            throw std::runtime_error("error: invalid cast from 'Object' to type 'sf::Color'");    
+        return sf::Color(values[0], values[1], values[2]);
+    }
+    else if(this->GetArrayHolder()->GetArrayType() == ObjectType::DECIMAL) {
+        std::vector<double> values = std::get<std::vector<double>>(this->GetArrayHolder()->m_Values);
+    
+        if(values.size() < 3)
+            throw std::runtime_error("error: invalid cast from 'Object' to type 'sf::Color'");
+
+        // Check if the numbers are float between 0 and 1.
+        // If so, then parse the list as an HSV color code.
+        // TODO: Fix issues where it is parsed as HSV for low RGB values.
+        if((values[0] >= 0.0 && values[0] <= 1.0)
+        && (values[1] >= 0.0 && values[1] <= 1.0)
+        && (values[2] >= 0.0 && values[2] <= 1.0)) {
+            float h = std::min(values[0] * 360, 359.99);
+            float s = std::min(values[1], 0.99);
+            float v = std::min(values[2], 0.99);
+            return sf::HSVColor(h, s, v).toRgb();
+        }
+
+        return sf::Color((int) values[0], (int) values[1], (int) values[2]);
+    }
+    throw std::runtime_error("error: invalid cast from 'Object' to type 'sf::Color'");
+}
+
+Object& Object::operator=(const Scalar& value) {
+    if(this->Is(ObjectType::OBJECT) || this->Is(ObjectType::ARRAY))
+        m_Value = MakeShared<ScalarHolder>(value);
+    else
+        this->GetScalarHolder()->m_Value = value;
+    return *this;
+}
+
+Object& Object::operator=(const Object& value) {
+    m_Depth = value.GetDepth();
+    m_Value = value.GetHolder()->Copy();
+    m_Value->SetDepth(m_Depth);
+    return *this;
+}
+
+SharedPtr<AbstractHolder> Object::GetHolder() {
+    return m_Value;
+}
+
+const SharedPtr<AbstractHolder> Object::GetHolder() const {
+    return m_Value;
+}
+
+SharedPtr<ScalarHolder> Object::GetScalarHolder() {
+    return CastSharedPtr<ScalarHolder>(m_Value);
+}
+
+const SharedPtr<ScalarHolder> Object::GetScalarHolder() const {
+    return CastSharedPtr<ScalarHolder>(m_Value);
+}
+
+SharedPtr<ArrayHolder> Object::GetArrayHolder() {
+    return CastSharedPtr<ArrayHolder>(m_Value);
+}
+
+const SharedPtr<ArrayHolder> Object::GetArrayHolder() const {
+    return CastSharedPtr<ArrayHolder>(m_Value);
+}
+
+SharedPtr<ObjectHolder> Object::GetObjectHolder() {
+    return CastSharedPtr<ObjectHolder>(m_Value);
+}
+
+const SharedPtr<ObjectHolder> Object::GetObjectHolder() const {
+    return CastSharedPtr<ObjectHolder>(m_Value);
+}
+
+////////////////////////////////
+//    ScalarHolder class      //
+////////////////////////////////
+
+ScalarHolder::ScalarHolder() : m_Value(0.0) {}
+
+ScalarHolder::ScalarHolder(const ScalarHolder& holder) : m_Value(holder.m_Value) {}
+
+ScalarHolder::ScalarHolder(const Scalar& value) : m_Value(value) {}
+
+ObjectType ScalarHolder::GetType() const {
+    return (ObjectType) m_Value.index();
+}
+
+SharedPtr<AbstractHolder> ScalarHolder::Copy() const {
+    SharedPtr<ScalarHolder> copy = MakeShared<ScalarHolder>();
+    copy->m_Value = m_Value;
+    return copy;
+}
+
+void ScalarHolder::SetDepth(uint depth) {}
+
+////////////////////////////////
+//     ArrayHolder class      //
+////////////////////////////////
+
+ArrayHolder::ArrayHolder() : m_Values(std::vector<double>{})
+{}
+
+ArrayHolder::ArrayHolder(const ArrayHolder& holder) : m_Values(holder.m_Values)
+{}
+
+ArrayHolder::ArrayHolder(const Array& value) : m_Values(value)
+{}
+
+ObjectType ArrayHolder::GetType() const {
+    return ObjectType::ARRAY;
+}
+
+SharedPtr<AbstractHolder> ArrayHolder::Copy() const {
+    if(this->GetArrayType() != ObjectType::OBJECT) {
+        SharedPtr<ArrayHolder> copy = MakeShared<ArrayHolder>();
+        copy->m_Values = m_Values;
+        return copy;
+    }
+    const std::vector<SharedPtr<Object>>& objects = std::get<std::vector<SharedPtr<Object>>>(m_Values);
+    std::vector<SharedPtr<Object>> copyValues = std::vector<SharedPtr<Object>>(objects.size());
+    for(const auto& object : objects) {
+        copyValues.push_back(MakeShared<Object>(*object));
+    }
+    SharedPtr<ArrayHolder> copy = MakeShared<ArrayHolder>(copyValues);
+    return copy;
+}
+
+void ArrayHolder::SetDepth(uint depth) {
+    if(this->GetArrayType() == ObjectType::OBJECT) {
+        std::vector<SharedPtr<Object>>& objects = std::get<std::vector<SharedPtr<Object>>>(m_Values);
+        for(auto& object : objects) {
+            object->SetDepth(depth+1);
+        }
+    }
+}
+
+ObjectType ArrayHolder::GetArrayType() const {
+    return (ObjectType) m_Values.index();
+}
+
+////////////////////////////////
+//     ObjectHolder class     //
+////////////////////////////////
+
+
+ObjectHolder::ObjectHolder()
+{}
+
+ObjectHolder::ObjectHolder(const ObjectHolder& holder) {
+    for(auto [key, pair] : holder.m_Values) {
+        m_Values[key] = std::make_pair(pair.first, MakeShared<Object>(*pair.second));
+    }
+}
+
+ObjectType ObjectHolder::GetType() const {
+    return ObjectType::OBJECT;
+}
+
+SharedPtr<AbstractHolder> ObjectHolder::Copy() const {
+    SharedPtr<ObjectHolder> copy = MakeShared<ObjectHolder>();
+    for(const auto&[key, pair] : m_Values) {
+        copy->m_Values[key] = std::make_pair(pair.first, MakeShared<Object>(*pair.second));
+    }
+    return copy;
+}
+
+void ObjectHolder::SetDepth(uint depth) {
+    for(auto& [key, pair] : m_Values)
+        pair.second->SetDepth(depth + 1);
+}
+
+////////////////////////////////
+//      Global functions      //
+////////////////////////////////
+
+
+SharedPtr<Object> Parser::ParseFile(const std::string& filePath) {
     std::ifstream file(filePath);
     std::string content = File::ReadString(file);
     file.close();
     return Parse(content);
 }
 
-Node Parser::ParseFile(std::ifstream& file) {
+SharedPtr<Object> Parser::ParseFile(std::ifstream& file) {
     std::string content = File::ReadString(file);
     return Parse(content);
 }
 
-Node Parser::Parse(const std::string& content) {
+SharedPtr<Object> Parser::Parse(const std::string& content) {
     std::deque<PToken> tokens = Parser::Lex(content);
-    Node node = Parse(tokens);
-    node.SetDepth(0);
-    return node;
+    SharedPtr<Object> object = Parse(tokens);
+    object->SetDepth(0);
+    return object;
 }
 
-Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
+SharedPtr<Object> Parser::Parse(std::deque<PToken>& tokens, uint depth) {
     enum ParsingState { KEY, OPERATOR, VALUE };
     ParsingState state = KEY;
 
-    Node values;
-    Key key;
+    SharedPtr<Object> values = MakeShared<Object>();
+    Scalar key;
     Operator op = Operator::EQUAL;
 
     while(!tokens.empty()) {
@@ -471,7 +669,7 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
         tokens.pop_front();
 
         if(token->Is(TokenType::RIGHT_BRACE)) {
-            values.SetDepth(depth);
+            values->SetDepth(depth);
             return values;
         }
 
@@ -481,25 +679,13 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
 
         switch(state) {
             case KEY:
-                if(token->Is(TokenType::IDENTIFIER)) {
-                    key = ParseIdentifier(token, tokens);
+                try {
+                    key = ParseScalar(token, tokens)->AsScalar();
                     state = ParsingState::OPERATOR;
-                    break;
                 }
-                
-                if(token->Is(TokenType::NUMBER)) {
-                    key = std::get<double>(token->GetValue());
-                    state = ParsingState::OPERATOR;
-                    break;
+                catch(std::exception& e) {
+                    throw std::runtime_error(fmt::format("{}\nUnexpected token while parsing key (type={}).", e.what(), (int) token->GetType()));
                 }
-                
-                if(token->Is(TokenType::DATE)) {
-                    key = std::get<Date>(token->GetValue());
-                    state = ParsingState::OPERATOR;
-                    break;
-                }
-
-                throw std::runtime_error(fmt::format("Unexpected token while parsing key (type={}).", (int) token->GetType()));
                 break;
 
             case OPERATOR:
@@ -518,28 +704,32 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                 
             case VALUE:
                 tokens.push_front(token);
-                Node node;
+                SharedPtr<Object> object;
                 try {
-                    node = ParseNode(tokens);
+                    object = ParseObject(tokens);
                 }
                 catch (std::exception& e) {
-                    throw std::runtime_error(fmt::format("Failed to parse value for key {}\n{}", key, e.what()));
+                    throw std::runtime_error(fmt::format("{}\nFailed to parse value for key {}", e.what(), key));
                 }
 
-                if(values.ContainsKey(key)) {
-                    Node& current = values[key];
+                if(values->ContainsKey(key)) {
+                    SharedPtr<Object> current = values->GetObject(key);
 
-                    if(!current.Is(ValueType::NODE)) {
-                        current.Push((RawValue) node);
+                    if(current->Is(ObjectType::OBJECT) && object->Is(ObjectType::OBJECT)) {
+                        current->Merge(object);
+                    }
+                    else if(object->Is(ObjectType::OBJECT)) {
+                        current->Push(object);
+                    }
+                    else if(object->Is(ObjectType::ARRAY)) {
+                        current->Push(object->AsArray());
                     }
                     else {
-                        current.Merge(node);
+                        current->Push(object->AsScalar());
                     }
-
-                    // TODO: handle array of nodes?
                 }
                 else {
-                    values.Put(key, std::move(node), op);
+                    values->Put(key, object, op);
                 }
                 state = ParsingState::KEY;
                 break;
@@ -556,11 +746,11 @@ Node Parser::Parse(std::deque<PToken>& tokens, uint depth) {
     if(state == ParsingState::VALUE)
         throw std::runtime_error(fmt::format("error: unexpected end after operator {}.", op));
 
-    values.SetDepth(depth);
+    values->SetDepth(depth);
     return values;
 }
 
-Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
+SharedPtr<Object> Parser::Impl::ParseObject(std::deque<PToken>& tokens) {
     PToken token = tokens.front();
     tokens.pop_front();
 
@@ -601,9 +791,9 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
         tokens.pop_front();
     }
 
-    // Handle simple/raw values such as number, bool, string...
+    // Handle scalars (int, decimal, bool, string, Date, ScopedString)
     else if(!token->Is(TokenType::LEFT_BRACE)) {
-        return ParseRaw(token, tokens);
+        return ParseScalar(token, tokens);
     }
 
     // Handle lists: { 1 2 3 4 5 }
@@ -624,31 +814,34 @@ Node Parser::Impl::ParseNode(std::deque<PToken>& tokens) {
             return ParseList<std::string>(tokens);
             
         if(token->Is(TokenType::LEFT_BRACE))
-            return ParseList<Node>(tokens);
+            return ParseList<SharedPtr<Object>>(tokens);
     }
     
     return Parse(tokens, 1);
     // throw std::runtime_error("error: failed to parse node value.");
 }
 
-Node Parser::Impl::ParseRaw(PToken token, std::deque<PToken>& tokens) {
+SharedPtr<Object> Parser::Impl::ParseScalar(PToken token, std::deque<PToken>& tokens) {
     switch(token->GetType()) {
         case TokenType::BOOLEAN:
-            return Node(std::get<bool>(token->GetValue()));
+            return MakeShared<Object>(std::get<bool>(token->GetValue()));
         case TokenType::DATE:
-            return Node(std::get<Date>(token->GetValue()));
+            return MakeShared<Object>(std::get<Date>(token->GetValue()));
         case TokenType::IDENTIFIER:
-            return ParseIdentifier(token, tokens);
+            return ParseString(token, tokens);
         case TokenType::NUMBER:
-            return Node(std::get<double>(token->GetValue()));
+            // double intpart;
+            // if(modf(std::get<double>(token->GetValue()), &intpart) == 0.0)
+            //     return MakeShared<Object>((int) intpart);
+            return MakeShared<Object>(std::get<double>(token->GetValue()));
         case TokenType::STRING:
-            return Node(std::get<std::string>(token->GetValue()));
+            return MakeShared<Object>(std::get<std::string>(token->GetValue()));
         default:
-            throw std::runtime_error("error: unexpected token while parsing raw value.");
+            throw std::runtime_error("error: unexpected token while parsing scalar.");
     }
 }
 
-Node Parser::Impl::ParseIdentifier(PToken token, std::deque<PToken>& tokens) {
+SharedPtr<Object> Parser::Impl::ParseString(PToken token, std::deque<PToken>& tokens) {
     if(!token->Is(TokenType::IDENTIFIER))
         throw std::runtime_error("error: unexpected token while parsing identifier.");
 
@@ -656,16 +849,16 @@ Node Parser::Impl::ParseIdentifier(PToken token, std::deque<PToken>& tokens) {
 
     // Check if the token is a scope such as in: "scope:value"
     if(tokens.size() < 2 || !tokens.at(0)->Is(TokenType::TWO_DOTS) || !tokens.at(1)->Is(TokenType::IDENTIFIER))
-        return Node(firstValue);
+        return MakeShared<Object>(firstValue);
 
     std::string secondValue = std::get<std::string>(tokens.at(1)->GetValue());
     tokens.pop_front();
     tokens.pop_front();
     
-    return Node(ScopedString(firstValue, secondValue));
+    return MakeShared<Object>(ScopedString(firstValue, secondValue));
 }
 
-Node Parser::Impl::ParseRange(std::deque<PToken>& tokens) {
+SharedPtr<Object> Parser::Impl::ParseRange(std::deque<PToken>& tokens) {
     
     // First, check if the first two tokens are numbers
     // and initialize the minimum and maximum between
@@ -718,11 +911,11 @@ Node Parser::Impl::ParseRange(std::deque<PToken>& tokens) {
     for(int i = min; i <= max; i++)
         list.push_back((double) i);
 
-    return Node(list);
+    return MakeShared<Object>(list);
 }
 
 template<typename T>
-Node Parser::Impl::ParseList(std::deque<PToken>& tokens) {
+SharedPtr<Object> Parser::Impl::ParseList(std::deque<PToken>& tokens) {
     std::vector<T> list;
     PToken token;
     
@@ -740,13 +933,13 @@ Node Parser::Impl::ParseList(std::deque<PToken>& tokens) {
         tokens.pop_front();
     }
     
-    return Node(list);
+    return MakeShared<Object>(list);
 }
 
 
 template <>
-Node Parser::Impl::ParseList<Node>(std::deque<PToken>& tokens) {
-    std::vector<Node> list;
+SharedPtr<Object> Parser::Impl::ParseList<SharedPtr<Object>>(std::deque<PToken>& tokens) {
+    std::vector<SharedPtr<Object>> list;
     PToken token;
     
     // The RIGHT_BRACE token must be removed from the list before returning.
@@ -763,7 +956,7 @@ Node Parser::Impl::ParseList<Node>(std::deque<PToken>& tokens) {
         tokens.pop_front();
     }
     
-    return Node(list);
+    return MakeShared<Object>(list);
 }
     
 bool Parser::Impl::IsList(std::deque<PToken>& tokens) {
@@ -808,13 +1001,13 @@ void Parser::Benchmark() {
 
     sf::Time elapsedLexer = clock.restart();
 
-    Node result = Parser::Parse(tokens);
+    SharedPtr<Object> result = Parser::Parse(tokens);
     sf::Time elapsedParser = clock.getElapsedTime();
 
     fmt::println("file path = {}", filePath);
     fmt::println("file size = {}", String::FileSizeFormat(std::filesystem::file_size(filePath)));
     fmt::println("tokens = {}", tokensCount);
-    fmt::println("entries = {}", result.GetEntries().size());
+    fmt::println("entries = {}", result->GetEntries().size());
     fmt::println("elapsed file   = {}", String::DurationFormat(elapsedFile));
     fmt::println("elapsed lexer  = {}", String::DurationFormat(elapsedLexer));
     fmt::println("elapsed parser = {}", String::DurationFormat(elapsedParser));
@@ -830,8 +1023,8 @@ void Parser::Benchmark() {
     ///////////////////////////
     
     if(filePath == "test_mod/map_data/default.map") {
-        fmt::println("\nlakes = {}", result.Get("lakes"));
-        fmt::println("\nisland_region => {}", result.Get("island_region"));
+        fmt::println("\nlakes = {}", result->GetObject("lakes"));
+        fmt::println("\nisland_region => {}", result->GetObject("island_region"));
     }
 
     ///////////////////////////////
@@ -840,46 +1033,46 @@ void Parser::Benchmark() {
 
     if(filePath == "test_mod/parser_test.txt") {
         // Test number list.
-        fmt::println("\nlist = {}", result.Get("list"));
+        fmt::println("\nlist = {}", result->GetObject("list"));
             
         // Test range.
-        fmt::println("\nrange = {}", result.Get("range"));
+        fmt::println("\nrange = {}", result->GetObject("range"));
         
         // Test string list.
-        fmt::println("\nstring_list = {}", result.Get("string_list"));
+        fmt::println("\nstring_list = {}", result->GetObject("string_list"));
         
         // Test for single raw values.
-        fmt::println("\nidentifier => {}", result.Get("identifier"));
-        fmt::println("string => {}", result.Get("string"));
-        fmt::println("number => {}", result.Get("number"));
-        fmt::println("bool => {}", result.Get("bool"));
-        fmt::println("date => {}", result.Get("date"));
-        fmt::println("scope:value => {}", result.Get(ScopedString("scope", "value")));
-        // fmt::println("scope => {}", (ScopedString) result.Get("scope"));
+        fmt::println("\nidentifier => {}", result->GetObject("identifier"));
+        fmt::println("string => {}", result->GetObject("string"));
+        fmt::println("number => {}", result->GetObject("number"));
+        fmt::println("bool => {}", result->GetObject("bool"));
+        fmt::println("date => {}", result->GetObject("date"));
+        fmt::println("scope:value => {}", result->GetObject(ScopedString("scope", "value")));
+        // fmt::println("scope => {}", (ScopedString) result.GetObject("scope"));
         
         // Test date as key
-        fmt::println("1000.1.1 => {}", result.Get(Date(1000, 1, 1)));
+        fmt::println("1000.1.1 => {}", result->GetObject(Date(1000, 1, 1)));
         
         // Test utf8 characters as value
-        fmt::println("utf8 => {}", result.Get("utf8"));
+        fmt::println("utf8 => {}", result->GetObject("utf8"));
 
         // Test depth
-        fmt::println("depth: {}", result.Get("depth").GetDepth());
-        fmt::println("depth.name: {} {}", result.Get("depth").Get("name"), result.Get("depth").Get("name").GetDepth());
-        fmt::println("depth.1: {}", result.Get("depth").Get(1.0).GetDepth());
-        fmt::println("depth.1.name: {} {}", result.Get("depth").Get(1.0).Get("name"), result.Get("depth").Get(1.0).Get("name").GetDepth());
-        fmt::println("depth.1.2: {}", result.Get("depth").Get(1.0).Get(2.0).GetDepth());
-        fmt::println("depth.1.2.name: {} {}", result.Get("depth").Get(1.0).Get(2.0).Get("name"), result.Get("depth").Get(1.0).Get(2.0).Get("name").GetDepth());
-        fmt::println("depth.1.3: {}", result.Get("depth").Get(1.0).Get(2.0).Get(3.0).GetDepth());
-        fmt::println("depth.1.3.name: {} {}", result.Get("depth").Get(1.0).Get(2.0).Get(3.0).Get("name"), result.Get("depth").Get(1.0).Get(2.0).Get(3.0).Get("name").GetDepth());
+        fmt::println("depth: {}", result->GetObject("depth")->GetDepth());
+        fmt::println("depth.name: {} {}", result->GetObject("depth")->GetObject("name"), result->GetObject("depth")->GetObject("name")->GetDepth());
+        fmt::println("depth.1: {}", result->GetObject("depth")->GetObject(1.0)->GetDepth());
+        fmt::println("depth.1.name: {} {}", result->GetObject("depth")->GetObject(1.0)->GetObject("name"), result->GetObject("depth")->GetObject(1.0)->GetObject("name")->GetDepth());
+        fmt::println("depth.1.2: {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetDepth());
+        fmt::println("depth.1.2.name: {} {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject("name"), result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject("name")->GetDepth());
+        fmt::println("depth.1.3: {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject(3.0)->GetDepth());
+        fmt::println("depth.1.3.name: {} {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject(3.0)->GetObject("name"), result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject(3.0)->GetObject("name")->GetDepth());
         
-        fmt::println("operators = {}", result.Get("operators"));
+        fmt::println("operators = {}", result->GetObject("operators"));
     }
 }
 
 void Parser::Tests() {
     std::string dir = "tests/parser/";
-    Parser::Node data;
+    SharedPtr<Object> data;
 
     const auto& SerializeList = [](const auto& l) {
         std::string s = fmt::format(
@@ -896,55 +1089,63 @@ void Parser::Tests() {
 
     #define ASSERT(name, expected, got) if(expected != got) throw std::runtime_error(fmt::format("Failed tests at line {} for {}, expected {}, got {}", __LINE__, name, expected, got))
 
-    // Tests : Basic raw values (number, bool, string)
+    // Tests : Scalars (int, decimal, bool, string, date, scoped string)
     try {
-        data = Parser::ParseFile(dir + "basic_raw_values.txt");
-        ASSERT("int", 1234.0, (double) data.Get("i1"));
-        ASSERT("negative int", -1234.0, (double) data.Get("i2"));
-        ASSERT("double", 10.234, (double) data.Get("d1"));
-        ASSERT("negative double", -10.234, (double) data.Get("d2"));
-        ASSERT("bool true", true, (bool) data.Get("b_yes"));
-        ASSERT("bool false", false, (bool) data.Get("b_no"));
-        ASSERT("word", "Lorem", (std::string) data.Get("s1"));
-        ASSERT("string", "\"Lorem ipsum dolor sit amet\"", (std::string) data.Get("s2"));
+        data = Parser::ParseFile(dir + "scalars.txt");
+        ASSERT("int", 1234.0, data->Get<double>("i1"));
+        ASSERT("negative int", -1234.0, data->Get<double>("i2"));
+        ASSERT("double", 10.234, data->Get<double>("d1"));
+        ASSERT("negative double", -10.234, data->Get<double>("d2"));
+        ASSERT("bool true", true, data->Get<bool>("b_yes"));
+        ASSERT("bool false", false, data->Get<bool>("b_no"));
+        ASSERT("word", "Lorem", data->Get<std::string>("s1"));
+        ASSERT("string", "\"Lorem ipsum dolor sit amet\"", data->Get<std::string>("s2"));
+        ASSERT("date1", Date(14, 8, 19), data->Get<Date>("date1"));
+        ASSERT("date2", Date(1453, 5, 29), data->Get<Date>("date2"));
+        ASSERT("scoped string", ScopedString("culture", "roman"), data->Get<ScopedString>("culture"));
     }
     catch(std::exception& e) {
-        throw std::runtime_error(fmt::format("Failed to parse 'basic_raw_values.txt'\n{}", e.what()));
+        throw std::runtime_error(fmt::format("Failed to parse 'scalars.txt'\n{}", e.what()));
     }
     
-    // Tests : Complex raw values (Date, Scoped String, Lists)
+    // Tests : Arrays
     try {
-        data = Parser::ParseFile(dir + "complex_raw_values.txt");
-        ASSERT("date1", Date(14, 8, 19), (Date) data.Get("date1"));
-        ASSERT("date2", Date(1453, 5, 29), (Date) data.Get("date2"));
-        ASSERT("scoped string", ScopedString("culture", "roman"), (ScopedString) data.Get("culture"));
-        ASSERT("int list", "[100, 50, 200, -25]", SerializeList(data.Get<std::vector<double>>("int_list", {})));
-        ASSERT("double list", "[100.52, -50.99]", SerializeList(data.Get<std::vector<double>>("double_list", {})));
-        ASSERT("bool list", "[true, false, false, true]", SerializeList(data.Get<std::vector<bool>>("bool_list", {})));
-        ASSERT("string list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data.Get<std::vector<std::string>>("string_list", {})));
-        ASSERT("node list", "[{name = augustus}, {name = claudius}, {name = nero}]", SerializeList(data.Get<std::vector<Node>>("node_list", {})));
+        data = Parser::ParseFile(dir + "arrays.txt");
+        ASSERT("int list", "[100, 50, 200, -25]", SerializeList(data->GetArray<double>("int_list", {})));
+        ASSERT("double list", "[100.52, -50.99]", SerializeList(data->GetArray<double>("double_list", {})));
+        ASSERT("bool list", "[true, false, false, true]", SerializeList(data->GetArray<bool>("bool_list", {})));
+        ASSERT("string list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data->GetArray<std::string>("string_list", {})));
+        // ASSERT("date list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data->GetArray<Date>("date_list", {})));
+        // ASSERT("scoped string list", "[culture:roman]", SerializeList(data->GetArray<ScopedString>("scoped_string_list", {})));
+        ASSERT("node list", "[{name = augustus}, {name = claudius}, {name = nero}]", SerializeList(data->GetArray<SharedPtr<Object>>("node_list", {})));
     }
     catch(std::exception& e) {
-        throw std::runtime_error(fmt::format("Failed to parse 'complex_raw_values.txt'\n{}", e.what()));
+        throw std::runtime_error(fmt::format("Failed to parse 'arrays.txt'\n{}", e.what()));
     }
     
-    // Tests : Keys (number, string, date, scoped string)
+    // Tests : Keys (scalars)
     try {
         data = Parser::ParseFile(dir + "keys.txt");
-        ASSERT("number key", true, data.ContainsKey(10.0));
-        ASSERT("number key", "key1", (std::string) data.Get(10.0));
+        ASSERT("int key", true, data->ContainsKey(10.0));
+        ASSERT("int key", "key1", data->Get<std::string>(10.0));
         
-        ASSERT("string1 key", true, data.ContainsKey("string1"));
-        ASSERT("string1 key", "key2", (std::string) data.Get("string1"));
+        ASSERT("decimal key", true, data->ContainsKey(3.125));
+        ASSERT("decimal key", "key2", data->Get<std::string>(3.125));
         
-        // ASSERT("string2 key", true, data.ContainsKey("\"string2\""));
-        // ASSERT("string2 key", "key3", (std::string) data.Get("\"string2\""));
+        ASSERT("bool key", true, data->ContainsKey(true));
+        ASSERT("bool key", "key3", data->Get<std::string>(true));
         
-        ASSERT("date key", true, data.ContainsKey(Date(14, 8, 19)));
-        ASSERT("date key", "key4", (std::string) data.Get(Date(14, 8, 19)));
+        ASSERT("string1 key", true, data->ContainsKey("string1"));
+        ASSERT("string1 key", "key4", data->Get<std::string>("string1"));
         
-        ASSERT("scoped string key", true, data.ContainsKey(ScopedString("culture", "roman")));
-        ASSERT("scoped string key", "key6", (std::string) data.Get(ScopedString("culture", "roman")));
+        ASSERT("string2 key", true, data->ContainsKey("\"string2\""));
+        ASSERT("string2 key", "key5", data->Get<std::string>("\"string2\""));
+        
+        ASSERT("date key", true, data->ContainsKey(Date(14, 8, 19)));
+        ASSERT("date key", "key6", data->Get<std::string>(Date(14, 8, 19)));
+        
+        ASSERT("scoped string key", true, data->ContainsKey(ScopedString("culture", "roman")));
+        ASSERT("scoped string key", "key7", data->Get<std::string>(ScopedString("culture", "roman")));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'keys.txt'\n{}", e.what()));
@@ -953,38 +1154,41 @@ void Parser::Tests() {
     // Tests : Operators
     try {
         data = Parser::ParseFile(dir + "operators.txt");
-        ASSERT("eq operator", Parser::Operator::EQUAL, data.GetOperator("op1"));
-        ASSERT("lt operator", Parser::Operator::LESS, data.GetOperator("op2"));
-        ASSERT("le operator", Parser::Operator::LESS_EQUAL, data.GetOperator("op3"));
-        ASSERT("gt operator", Parser::Operator::GREATER, data.GetOperator("op4"));
-        ASSERT("ge operator", Parser::Operator::GREATER_EQUAL, data.GetOperator("op5"));
+        ASSERT("eq operator", Parser::Operator::EQUAL, data->GetOperator("op1"));
+        ASSERT("lt operator", Parser::Operator::LESS, data->GetOperator("op2"));
+        ASSERT("le operator", Parser::Operator::LESS_EQUAL, data->GetOperator("op3"));
+        ASSERT("gt operator", Parser::Operator::GREATER, data->GetOperator("op4"));
+        ASSERT("ge operator", Parser::Operator::GREATER_EQUAL, data->GetOperator("op5"));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'operators.txt'\n{}", e.what()));
     }
     
-    // Tests : Lists
+    // Tests : Append to array
     try {
-        data = Parser::ParseFile(dir + "lists.txt");
-        ASSERT("number append list", "[10, 20, 50]", SerializeList(data.Get<std::vector<double>>("numbers", {})));
-        ASSERT("string append list", "[greedy, compassionate, brave]", SerializeList(data.Get("character").Get<std::vector<std::string>>("trait", {})));
-        ASSERT("bool append list", "[true, false, false]", SerializeList(data.Get<std::vector<bool>>("booleans", {})));
-        ASSERT("node append list", "[{coat_of_arms = \"holy_order_coa1\"name = \"holy_order_name1\"}, {coat_of_arms = \"holy_order_coa2\"name = \"holy_order_name2\"}]", SerializeList(data.Get<std::vector<Node>>("holy_order_names", {})));
-        // fmt::println("{}", data.Get("test"));
+        data = Parser::ParseFile(dir + "arrays_append.txt");
+        ASSERT("int append list", "[10, 20, 50]", SerializeList(data->GetArray<double>("ints", {})));
+        ASSERT("double append list", "[3.125, 5, 2.7]", SerializeList(data->GetArray<double>("decimals", {})));
+        ASSERT("bool append list", "[true, false, false]", SerializeList(data->GetArray<bool>("booleans", {})));
+        ASSERT("string append list", "[greedy, compassionate, brave]", SerializeList(data->GetObject("character")->GetArray<std::string>("trait", {})));
+        // ASSERT("date append list", "[]", SerializeList(data->GetArray<Date>("dates", {})));
+        // ASSERT("scoped string append list", "[]", SerializeList(data->GetArray<ScopedString>("scoped_strings", {})));
+        ASSERT("node append list", "[{name = \"holy_order_name1\"coat_of_arms = \"holy_order_coa1\"}, {name = \"holy_order_name2\"coat_of_arms = \"holy_order_coa2\"}]", SerializeList(data->GetArray<SharedPtr<Object>>("holy_order_names", {})));
+        // fmt::println("{}", data->GetObject("test"));
     }
     catch(std::exception& e) {
-        throw std::runtime_error(fmt::format("Failed to parse 'lists.txt'\n{}", e.what()));
+        throw std::runtime_error(fmt::format("Failed to parse 'arrays_append.txt'\n{}", e.what()));
     }
     
     // Tests : Depth
     try {
         data = Parser::ParseFile(dir + "depth.txt");
-        ASSERT("initial depth", 0, data.GetDepth());
-        ASSERT("depth 1", 1, data.Get("depth1").GetDepth());
-        ASSERT("depth 2", 2, data.Get("depth1").Get("depth2").GetDepth());
-        ASSERT("depth 3a", 3, data.Get("depth1").Get("depth2").Get("depth3a").GetDepth());
-        ASSERT("depth 3b", 3, data.Get("depth1").Get("depth2").Get("depth3b").GetDepth());
-        ASSERT("depth 4", 4, data.Get("depth1").Get("depth2").Get("depth3a").Get("depth4").GetDepth());
+        ASSERT("initial depth", 0, data->GetDepth());
+        ASSERT("depth 1", 1, data->GetObject("depth1")->GetDepth());
+        ASSERT("depth 2", 2, data->GetObject("depth1")->GetObject("depth2")->GetDepth());
+        ASSERT("depth 3a", 3, data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3a")->GetDepth());
+        ASSERT("depth 3b", 3, data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3b")->GetDepth());
+        ASSERT("depth 4", 4, data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3a")->GetObject("depth4")->GetDepth());
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'depth.txt'\n{}", e.what()));
@@ -993,10 +1197,10 @@ void Parser::Tests() {
     // Tests : Colors
     try {
         data = Parser::ParseFile(dir + "colors.txt");
-        ASSERT("hsv1 color", sf::Color(77, 70, 61), (sf::Color) data.Get("c1"));
-        ASSERT("hsv2 color", sf::Color(225, 230, 207), (sf::Color) data.Get("c2"));
-        ASSERT("rgb1 color", sf::Color(153, 2, 34), (sf::Color) data.Get("c3"));
-        ASSERT("rgb2 color", sf::Color(23, 21, 99), (sf::Color) data.Get("c4"));
+        ASSERT("hsv1 color", sf::Color(77, 70, 61), data->Get<sf::Color>("c1"));
+        ASSERT("hsv2 color", sf::Color(225, 230, 207), data->Get<sf::Color>("c2"));
+        ASSERT("rgb1 color", sf::Color(153, 2, 34), data->Get<sf::Color>("c3"));
+        ASSERT("rgb2 color", sf::Color(23, 21, 99), data->Get<sf::Color>("c4"));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'colors.txt'\n{}", e.what()));
@@ -1005,11 +1209,11 @@ void Parser::Tests() {
     // Tests : Ranges
     try {
         data = Parser::ParseFile(dir + "ranges.txt");
-        ASSERT("range list", "[1, 2, 3, 4, 5]", SerializeList(data.Get<std::vector<double>>("l1", {})));
-        ASSERT("transform to range", "RANGE { 1 5 }", fmt::format("{}", (const Node&) data.Get("l1")));
-        ASSERT("concatenate list", "[1, 2, 3, 4, 5, 6, 7, 8]", SerializeList(data.Get<std::vector<double>>("l2", {})));
-        ASSERT("transform to range", "RANGE { 1 8 }", fmt::format("{}", (const Node&) data.Get("l2")));
-        ASSERT("range list", "{\n\tl3 = RANGE { 5  11 }\n}", fmt::format("{}", (const Node&) data.Get("l3")));
+        ASSERT("range list", "[1, 2, 3, 4, 5]", SerializeList(data->GetArray<double>("l1", {})));
+        ASSERT("transform to range", "RANGE { 1 5 }", fmt::format("{}", data->GetObject("l1")));
+        ASSERT("concatenate list", "[1, 2, 3, 4, 5, 6, 7, 8]", SerializeList(data->GetArray<double>("l2", {})));
+        ASSERT("transform to range", "RANGE { 1 8 }", fmt::format("{}", data->GetObject("l2")));
+        ASSERT("range list", "{\n\tl3 = RANGE { 5  11 }\n}", fmt::format("{}", data->GetObject("l3")));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'ranges.txt'\n{}", e.what()));

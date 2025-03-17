@@ -9,7 +9,7 @@ Title::Title(std::string name, sf::Color color, bool landless) :
     m_Name(name),
     m_Color(color),
     m_Landless(landless),
-    m_OriginalData(MakeShared<Parser::Node>()),
+    m_OriginalData(MakeShared<Parser::Object>()),
     m_SelectionFocus(true)
 {}
 
@@ -65,7 +65,7 @@ std::string Title::GetOriginalFilePath() const {
     return m_OriginalFilePath;
 }
 
-SharedPtr<Parser::Node> Title::GetOriginalData() const {
+SharedPtr<Parser::Object> Title::GetOriginalData() const {
     return m_OriginalData;
 }
 
@@ -73,8 +73,8 @@ void Title::SetOriginalFilePath(const std::string& filePath) {
     m_OriginalFilePath = filePath;
 }
 
-void Title::SetOriginalData(const Parser::Node& data) {
-    m_OriginalData = MakeShared<Parser::Node>(data);
+void Title::SetOriginalData(SharedPtr<Parser::Object> data) {
+    m_OriginalData = data;
 }
 
 std::string Title::GetOriginalHistoryFilePath() const {
@@ -85,12 +85,12 @@ void Title::SetOriginalHistoryFilePath(const std::string& filePath) {
     m_OriginalHistoryFilePath = filePath;
 }
 
-std::map<Date, SharedPtr<Parser::Node>>& Title::GetHistory() {
+std::map<Date, SharedPtr<Parser::Object>>& Title::GetHistory() {
     return m_History;
 }
 
-void Title::AddHistory(Date date, Parser::Node data) {
-    m_History[date] = MakeShared<Parser::Node>(data);
+void Title::AddHistory(Date date, SharedPtr<Parser::Object> data) {
+    m_History[date] = data;
     m_History[date]->SetDepth(0);
 }
 

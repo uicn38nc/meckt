@@ -62,9 +62,9 @@ public:
     void SetHolding(ProvinceHolding holding);
     
     std::string GetOriginalFilePath() const;
-    SharedPtr<Parser::Node> GetOriginalData() const;
+    SharedPtr<Parser::Object> GetOriginalData() const;
     void SetOriginalFilePath(const std::string& filePath);
-    void SetOriginalData(const Parser::Node& data);
+    void SetOriginalData(SharedPtr<Parser::Object> data);
     
     sf::Vector2i GetImagePosition() const;
     uint GetImagePixelsCount() const;
@@ -84,7 +84,7 @@ private:
     ProvinceHolding m_Holding;
 
     std::string m_OriginalFilePath;
-    SharedPtr<Parser::Node> m_OriginalData;
+    SharedPtr<Parser::Object> m_OriginalData;
 
     sf::Vector2i m_ImagePosition;
     uint m_ImagePixelsCount;

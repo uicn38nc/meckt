@@ -26,14 +26,14 @@ public:
     void SetLandless(bool landless);
     
     std::string GetOriginalFilePath() const;
-    SharedPtr<Parser::Node> GetOriginalData() const;
+    SharedPtr<Parser::Object> GetOriginalData() const;
     void SetOriginalFilePath(const std::string& filePath);
-    void SetOriginalData(const Parser::Node& data);
+    void SetOriginalData(SharedPtr<Parser::Object> data);
 
     std::string GetOriginalHistoryFilePath() const;
     void SetOriginalHistoryFilePath(const std::string& filePath);
-    std::map<Date, SharedPtr<Parser::Node>>& GetHistory();
-    void AddHistory(Date date, Parser::Node data);
+    std::map<Date, SharedPtr<Parser::Object>>& GetHistory();
+    void AddHistory(Date date, SharedPtr<Parser::Object> data);
     void RemoveHistory(Date date);
 
     virtual bool HasSelectionFocus() const;
@@ -48,10 +48,10 @@ protected:
     bool m_Landless;
 
     std::string m_OriginalFilePath;
-    SharedPtr<Parser::Node> m_OriginalData;
+    SharedPtr<Parser::Object> m_OriginalData;
 
     std::string m_OriginalHistoryFilePath;
-    std::map<Date, SharedPtr<Parser::Node>> m_History;
+    std::map<Date, SharedPtr<Parser::Object>> m_History;
 
     bool m_SelectionFocus;
 };

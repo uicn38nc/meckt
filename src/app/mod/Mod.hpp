@@ -37,7 +37,7 @@ public:
     void LoadCultures();
     void LoadReligions();
 
-    std::vector<SharedPtr<Title>> ParseTitles(const std::string& filePath, Parser::Node& data);
+    std::vector<SharedPtr<Title>> ParseTitles(const std::string& filePath, SharedPtr<Parser::Object> data);
 
     void Export();
     void ExportDefaultMapFile();

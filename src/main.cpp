@@ -1,5 +1,4 @@
 #include "app/App.hpp"
-#include "parser/Parser.hpp"
 
 int main() {
 #ifdef _WIN32
@@ -20,6 +19,7 @@ int main() {
     App app;
     app.Init();
     app.Run();
+    // Parser::Tests();
     // Parser::Benchmark();
 #endif
     return 0;

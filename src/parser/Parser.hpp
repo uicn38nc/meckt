@@ -1,14 +1,22 @@
 #pragma once
 
 #include "parser/Lexer.hpp"
+#include "util/OrderedMap.hpp"
 
 #include <fmt/format.h>
 #include <fmt/compile.h>
 #include <ranges>
 
 namespace Parser {
-    using Key = std::variant<double, std::string, Date, ScopedString>;
-    using RawValue = std::variant<double, bool, std::string, Date, ScopedString, std::vector<double>, std::vector<bool>, std::vector<std::string>, std::vector<Node>>;
+    
+    class Object;
+    class AbstractHolder;
+    class ScalarHolder;
+    class ArrayHolder;
+    class ObjectHolder;
+    
+    using Scalar = std::variant<int, double, bool, std::string, Date, ScopedString>;
+    using Array = std::variant<std::vector<int>, std::vector<double>, std::vector<bool>, std::vector<std::string>, std::vector<Date>, std::vector<ScopedString>, std::vector<SharedPtr<Object>>>;
 
     enum class Operator {
         EQUAL,
@@ -18,142 +26,182 @@ namespace Parser {
         GREATER_EQUAL,
     };
 
-    enum class ValueType {
-        NUMBER,
+    enum class ObjectType {
+        INT,
+        DECIMAL,
         BOOL,
         STRING,
         DATE,
         SCOPED_STRING,
-        NUMBER_LIST,
-        BOOL_LIST,
-        STRING_LIST,
-        NODE_LIST,
-        NODE
+        OBJECT,
+        ARRAY
     };
 
-    class Node {
+    class Object {
         public:
-            Node();
-            Node(const Node& node);
-            Node(const RawValue& value);
-            Node(const sf::Color& color);
-            Node(const std::map<Key, std::pair<Operator, Node>>& values);
+            Object();
+            Object(const Object& object);
+            Object(const Scalar& scalar);
+            Object(const Array& array);
+            Object(const std::vector<SharedPtr<Object>>& array);
+            Object(const sf::Color& color);
 
-            ValueType GetType() const;
-            bool Is(ValueType type) const;
-            bool IsList() const;
+            ObjectType GetType() const;
+            ObjectType GetArrayType() const;
+            bool Is(ObjectType type) const;
 
             uint GetDepth() const;
-            void SetDepth(uint depth, bool updateChilds = true);
+            void SetDepth(uint depth);
 
-            // Functions to use with LeafHolder.
-            void Push(const Node& node);
-            void Push(const RawValue& value);
-            void Merge(const Node& node);
+            bool IsRoot() const;
+            void SetRoot(bool isRoot);
 
-            // Functions to use with NodeHolder.
-            Node& Get(const Key& key);
-            const Node& Get(const Key& key) const;
-            template <typename T> T Get(const Key& key, T defaultValue) const;
-            Operator GetOperator(const Key& key);
-            std::map<Key, std::pair<Operator, Node>>& GetEntries();
-            const std::map<Key, std::pair<Operator, Node>>& GetEntries() const;
-            std::vector<Key> GetKeys() const;
-            bool ContainsKey(const Key& key) const;
-            void Put(const Key& key, const Node& node, Operator op = Operator::EQUAL);
-            void Put(const Key& key, const RawValue& value, Operator op = Operator::EQUAL);
-            void Put(const Key& key, const sf::Color& color, Operator op = Operator::EQUAL);
-            Node Remove(const Key& key);
+            void ConvertToArray();
 
-            // Overload cast for LeafHolder.
+            // Functions to use with ArrayHolder or ObjectHolder.
+            void Push(const SharedPtr<Object>& object);
+            void Push(const Scalar& scalar);
+            void Push(const Array& array);
+            void Merge(const SharedPtr<Object>& object);
+
+            // Functions to use with ObjectHolder.
+            template <typename T> T Get(const Scalar& key) const;
+            template <typename T> T Get(const Scalar& key, T defaultValue) const;
+            template <typename T> std::vector<T> GetArray(const Scalar& key) const;
+            template <typename T> std::vector<T> GetArray(const Scalar& key, std::vector<T> defaultValue) const;
+            SharedPtr<Object> GetObject(const Scalar& key) const;
+            Operator GetOperator(const Scalar& key);
+
+            OrderedMap<Scalar, std::pair<Operator, SharedPtr<Object>>>& GetEntries();
+            const OrderedMap<Scalar, std::pair<Operator, SharedPtr<Object>>>& GetEntries() const;
+            std::vector<Scalar> GetKeys() const;
+
+            bool ContainsKey(const Scalar& key) const;
+            void Put(const Scalar& key, const SharedPtr<Object>& value, Operator op = Operator::EQUAL);
+            void Put(const Scalar& key, const Scalar& value, Operator op = Operator::EQUAL);
+            void Put(const Scalar& key, const Array& value, Operator op = Operator::EQUAL);
+            void Put(const Scalar& key, const sf::Color& value, Operator op = Operator::EQUAL);
+            SharedPtr<Object> Remove(const Scalar& key);
+
+            // Overload cast for scalars.
+            Scalar& AsScalar();
+            Scalar AsScalar() const;
             operator int() const;
             operator double() const;
             operator bool() const;
             operator std::string() const;
             operator Date() const;
             operator ScopedString() const;
+            operator Scalar() const;
+
+            // Overload cast for arrays
+            Array& AsArray();
+            const Array& AsArray() const;
+            operator std::vector<int>&() const;
             operator std::vector<double>&() const;
             operator std::vector<bool>&() const;
             operator std::vector<std::string>&() const;
-            operator std::vector<Node>&() const;
-            operator RawValue&() const;
-            operator Key() const;
+            operator std::vector<Date>&() const;
+            operator std::vector<ScopedString>&() const;
+            operator std::vector<SharedPtr<Object>>&() const;
+            operator Array&() const;
             operator sf::Color() const;
 
-            Node& operator=(const RawValue& value);
-            Node& operator=(const Node& value);
+            Object& operator=(const Scalar& value);
+            Object& operator=(const Array& value);
+            Object& operator=(const Object& value);
 
-            Node& operator [](const Key& key);
-            const Node& operator [](const Key& key) const;
-        
         private:
             // Function to access the underlying value holder.
-            SharedPtr<NodeHolder> GetNodeHolder();
-            const SharedPtr<NodeHolder> GetNodeHolder() const;
+            SharedPtr<AbstractHolder> GetHolder();
+            const SharedPtr<AbstractHolder> GetHolder() const;
+            
+            SharedPtr<ScalarHolder> GetScalarHolder();
+            const SharedPtr<ScalarHolder> GetScalarHolder() const;
 
-            SharedPtr<LeafHolder> GetLeafHolder();
-            const SharedPtr<LeafHolder> GetLeafHolder() const;
+            SharedPtr<ArrayHolder> GetArrayHolder();
+            const SharedPtr<ArrayHolder> GetArrayHolder() const;
 
-        private:
-            SharedPtr<AbstractValueHolder> m_Value;
+            SharedPtr<ObjectHolder> GetObjectHolder();
+            const SharedPtr<ObjectHolder> GetObjectHolder() const;
+
+            SharedPtr<AbstractHolder> m_Value;
             uint m_Depth;
+            bool m_IsRoot;
     };
 
-    class AbstractValueHolder {
+    class AbstractHolder {
         public:
-            virtual ValueType GetType() const = 0;
-            virtual SharedPtr<AbstractValueHolder> Copy() const = 0;
+            virtual ObjectType GetType() const = 0;
+            virtual SharedPtr<AbstractHolder> Copy() const = 0;
             virtual void SetDepth(uint depth) = 0;
     };
 
-    class NodeHolder : public AbstractValueHolder {
-        friend Node;
+    class ScalarHolder : public AbstractHolder {
+        friend Object;
 
         public:
-            NodeHolder();
-            NodeHolder(const NodeHolder& n);
-            NodeHolder(const std::map<Key, std::pair<Operator, Node>>& values);
+            ScalarHolder();
+            ScalarHolder(const ScalarHolder& holder);
+            ScalarHolder(const Scalar& scalar);
 
-            virtual ValueType GetType() const;
-            virtual SharedPtr<AbstractValueHolder> Copy() const;
+            virtual ObjectType GetType() const;
+            virtual SharedPtr<AbstractHolder> Copy() const;
             virtual void SetDepth(uint depth);
 
         private:
-            std::map<Key, std::pair<Operator, Node>> m_Values;
+            Scalar m_Value;
     };
-
-    class LeafHolder : public AbstractValueHolder {
-        friend Node;
+    
+    class ArrayHolder : public AbstractHolder {
+        friend Object;
 
         public:
-            LeafHolder();
-            LeafHolder(const LeafHolder& l);
-            LeafHolder(const RawValue& value);
+            ArrayHolder();
+            ArrayHolder(const ArrayHolder& holder);
+            ArrayHolder(const Array& value);
 
-            virtual ValueType GetType() const;
-            virtual SharedPtr<AbstractValueHolder> Copy() const;
+            virtual ObjectType GetType() const;
+            virtual SharedPtr<AbstractHolder> Copy() const;
+            virtual void SetDepth(uint depth);
+
+            ObjectType GetArrayType() const;
+
+        private:
+            Array m_Values;
+    };
+    
+    class ObjectHolder : public AbstractHolder {
+        friend Object;
+
+        public:
+            ObjectHolder();
+            ObjectHolder(const ObjectHolder& holder);
+            ObjectHolder(const SharedPtr<Object>& value);
+
+            virtual ObjectType GetType() const;
+            virtual SharedPtr<AbstractHolder> Copy() const;
             virtual void SetDepth(uint depth);
 
         private:
-            RawValue m_Value;
+            OrderedMap<Scalar, std::pair<Operator, SharedPtr<Object>>> m_Values;
     };
 
-
-    Node ParseFile(const std::string& filePath);
-    Node ParseFile(std::ifstream& file);
-    Node Parse(const std::string& content);
-    Node Parse(std::deque<PToken>& tokens, uint depth = 0);
+    SharedPtr<Object> ParseFile(const std::string& filePath);
+    SharedPtr<Object> ParseFile(std::ifstream& file);
+    SharedPtr<Object> Parse(const std::string& content);
+    SharedPtr<Object> Parse(std::deque<PToken>& tokens, uint depth = 0);
 
     namespace Impl {
-        Node ParseNode(std::deque<PToken>& tokens);
-        Node ParseRaw(PToken token, std::deque<PToken>& tokens);
-        Node ParseIdentifier(PToken token, std::deque<PToken>& tokens);
-        Node ParseRange(std::deque<PToken>& tokens);
+        SharedPtr<Object> ParseObject(std::deque<PToken>& tokens);
+        SharedPtr<Object> ParseScalar(PToken token, std::deque<PToken>& tokens);
+        SharedPtr<Object> ParseString(PToken token, std::deque<PToken>& tokens);
+        SharedPtr<Object> ParseRange(std::deque<PToken>& tokens);
 
         template<typename T>
-        Node ParseList(std::deque<PToken>& tokens);
+        SharedPtr<Object> ParseList(std::deque<PToken>& tokens);
         template <>
-        Node ParseList<Node>(std::deque<PToken>& tokens);
+        SharedPtr<Object> ParseList<SharedPtr<Object>>(std::deque<PToken>& tokens);
 
         bool IsList(std::deque<PToken>& tokens);
     }
@@ -186,47 +234,40 @@ public:
 };
 
 template <>
-class fmt::formatter<Parser::Key> {
+class fmt::formatter<Parser::Scalar> {
 public:
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.begin();
     }
 
     template <typename Context>
-    constexpr auto format(const Parser::Key& key, Context& ctx) const {
-        switch(key.index()) {
-            case 0: return format_to(ctx.out(), "{}", std::get<double>(key));
-            case 1: return format_to(ctx.out(), "{}", std::get<std::string>(key));
-            case 2: return format_to(ctx.out(), "{}", std::get<Date>(key));
-            case 3: return format_to(ctx.out(), "{}", std::get<ScopedString>(key));
+    constexpr auto format(const Parser::Scalar& key, Context& ctx) const {
+        switch((Parser::ObjectType) key.index()) {
+            case Parser::ObjectType::INT: return format_to(ctx.out(), "{}", std::get<double>(key));
+            case Parser::ObjectType::DECIMAL: return format_to(ctx.out(), "{}", std::get<double>(key));
+            case Parser::ObjectType::BOOL: return format_to(ctx.out(), "{}", std::get<double>(key));
+            case Parser::ObjectType::STRING: return format_to(ctx.out(), "{}", std::get<std::string>(key));
+            case Parser::ObjectType::DATE: return format_to(ctx.out(), "{}", std::get<Date>(key));
+            case Parser::ObjectType::SCOPED_STRING: return format_to(ctx.out(), "{}", std::get<ScopedString>(key));
+            default: break;
         }
         return format_to(ctx.out(), "");
     }
 };
 
 template <>
-class fmt::formatter<Parser::RawValue> {
+class fmt::formatter<Parser::Array> {
 public:
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.begin();
     }
 
     template <typename Context>
-    constexpr auto format(const Parser::RawValue& value, Context& ctx) const {
-        switch((Parser::ValueType) value.index()) {
-            case Parser::ValueType::NUMBER:
-                return format_to(ctx.out(), "{}", std::get<double>(value));
-            case Parser::ValueType::BOOL:
-                return format_to(ctx.out(), "{}", (std::get<bool>(value) ? "yes" : "no"));
-            case Parser::ValueType::STRING:
-                return format_to(ctx.out(), "{}", std::get<std::string>(value));
-            case Parser::ValueType::DATE:
-                return format_to(ctx.out(), "{}", std::get<Date>(value));
-            case Parser::ValueType::SCOPED_STRING:
-                return format_to(ctx.out(), "{}", std::get<ScopedString>(value));
-            case Parser::ValueType::NUMBER_LIST: {
-                const std::vector<double>& numbers = std::get<std::vector<double>>(value);
-                if(isRange(numbers)) {
+    constexpr auto format(const Parser::Array& array, Context& ctx) const {
+        switch((Parser::ObjectType) array.index()) {
+            case Parser::ObjectType::INT: {
+                const std::vector<int>& numbers = std::get<std::vector<int>>(array);
+                if(isRange<int>(numbers)) {
                     return format_to(ctx.out(), "RANGE {{ {} {} }}", numbers[0], numbers[numbers.size()-1]);
                 }
                 return format_to(ctx.out(), "{{ {} }}", fmt::join(
@@ -235,22 +276,45 @@ public:
                     }), " ")
                 );
             }
-            case Parser::ValueType::BOOL_LIST:
+            case Parser::ObjectType::DECIMAL: {
+                const std::vector<double>& numbers = std::get<std::vector<double>>(array);
+                if(isRange<double>(numbers)) {
+                    return format_to(ctx.out(), "RANGE {{ {} {} }}", numbers[0], numbers[numbers.size()-1]);
+                }
                 return format_to(ctx.out(), "{{ {} }}", fmt::join(
-                    std::views::transform(std::get<std::vector<bool>>(value), [](const auto& v) {
-                        return fmt::format("{}", (v ? "yes" : "no"));
-                    }), " ")
-                );
-            case Parser::ValueType::STRING_LIST:
-                return format_to(ctx.out(), "{{ {} }}", fmt::join(
-                    std::views::transform(std::get<std::vector<std::string>>(value), [](const auto& v) {
+                    std::views::transform(numbers, [](const auto& v) {
                         return fmt::format("{}", v);
                     }), " ")
                 );
-            case Parser::ValueType::NODE_LIST:
+            }
+            case Parser::ObjectType::BOOL:
+                return format_to(ctx.out(), "{{ {} }}", fmt::join(
+                    std::views::transform(std::get<std::vector<bool>>(array), [](const auto& v) {
+                        return fmt::format("{}", (v ? "yes" : "no"));
+                    }), " ")
+                );
+            case Parser::ObjectType::STRING:
+                return format_to(ctx.out(), "{{ {} }}", fmt::join(
+                    std::views::transform(std::get<std::vector<std::string>>(array), [](const auto& v) {
+                        return fmt::format("{}", v);
+                    }), " ")
+                );
+            case Parser::ObjectType::DATE:
+                return format_to(ctx.out(), "{{ {} }}", fmt::join(
+                    std::views::transform(std::get<std::vector<Date>>(array), [](const auto& v) {
+                        return fmt::format("{}", v);
+                    }), " ")
+                );
+            case Parser::ObjectType::SCOPED_STRING:
+                return format_to(ctx.out(), "{{ {} }}", fmt::join(
+                    std::views::transform(std::get<std::vector<ScopedString>>(array), [](const auto& v) {
+                        return fmt::format("{}", v);
+                    }), " ")
+                );
+            case Parser::ObjectType::OBJECT:
                 return format_to(ctx.out(), "{{\n{}\n}}", fmt::join(
-                    std::views::transform(std::get<std::vector<Parser::Node>>(value), [](const auto& node) {
-                        return formatNode(node);
+                    std::views::transform(std::get<std::vector<SharedPtr<Parser::Object>>>(array), [](const auto& object) {
+                        return formatObject(object);
                     }), "\n")
                 );
             default:
@@ -258,22 +322,26 @@ public:
         }
     }
 
-    static std::string formatNode(const Parser::Node& node) {
-        if(node.Is(Parser::ValueType::NODE)) {
-            auto v = std::views::transform(node.GetEntries(), [](const auto& p) {
+    static std::string formatObject(const SharedPtr<Parser::Object>& object) {
+        if(object->Is(Parser::ObjectType::OBJECT)) {
+            auto v = std::views::transform(object->GetEntries(), [](const auto& p) {
                 return fmt::format(
                     FMT_COMPILE("{} {} {}"),
                     p.first, // Key
                     p.second.first, // Operator
-                    formatNode(p.second.second) // Value
+                    formatObject(p.second.second) // Value
                 );
             });
-            return fmt::format("{}{{ {} }}", std::string(std::max((uint) 1, node.GetDepth())-1, '\t'), fmt::join(v, " "));
+            return fmt::format("{}{{ {} }}", std::string(std::max((uint) 1, object->GetDepth())-1, '\t'), fmt::join(v, " "));
         }
-        return fmt::format("{}", (Parser::RawValue&) node);
+        else if(object->Is(Parser::ObjectType::ARRAY)) {
+            return fmt::format("{}", object->AsArray());
+        }
+        return fmt::format("{}", object->AsScalar());
     }
 
-    static bool isRange(const std::vector<double>& numbers) {
+    template <typename T>
+    static bool isRange(const std::vector<T>& numbers) {
         if(numbers.size() < 3)
             return false;
         for(int i = 1; i < numbers.size(); i++) {
@@ -285,37 +353,45 @@ public:
 };
 
 template <>
-class fmt::formatter<Parser::Node> {
+class fmt::formatter<Parser::Object> {
 public:
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.begin();
     }
 
     template <typename Context>
-    constexpr auto format(const Parser::Node& node, Context& ctx) const {
-        if(node.Is(Parser::ValueType::NODE)) {
-            auto v = std::views::transform(node.GetEntries(), [](const auto& p) {
-                if(p.second.second.Is(Parser::ValueType::NUMBER_LIST))
-                    return formatNumbersList(p.first, p.second.second);
+    constexpr auto format(const Parser::Object& object, Context& ctx) const {
+        if(object.Is(Parser::ObjectType::OBJECT)) {
+            auto v = std::views::transform(object.GetEntries(), [](const auto& p) {
+                if(p.second.second->Is(Parser::ObjectType::ARRAY)) {
+                    if(p.second.second->GetArrayType() == Parser::ObjectType::INT)
+                        return formatNumbersList<int>(p.first, p.second.second);
+                    if(p.second.second->GetArrayType() == Parser::ObjectType::DECIMAL)
+                        return formatNumbersList<double>(p.first, p.second.second);
+                }
                 return fmt::format(
                     FMT_COMPILE("{}{} {} {}"),
-                    std::string(std::max((uint) 1, p.second.second.GetDepth())-1, '\t'), // Indentation
+                    std::string(std::max((uint) 1, p.second.second->GetDepth())-1, '\t'), // Indentation
                     p.first, // Key
                     p.second.first, // Operator
                     p.second.second // Value
                 );
             });
-            if(node.GetDepth() == 0)
+            if(object.IsRoot())
                 return format_to(ctx.out(), "{}", fmt::join(v, "\n"));
-            return format_to(ctx.out(), "{{\n{}\n{}}}", fmt::join(v, "\n"), std::string(node.GetDepth()-1, '\t'));
+            return format_to(ctx.out(), "{{\n{}\n{}}}", fmt::join(v, "\n"), std::string(std::max((uint) 0, object.GetDepth())-1, '\t'));
         }
-        return format_to(ctx.out(), "{}", (Parser::RawValue&) node);
+        else if(object.Is(Parser::ObjectType::ARRAY)) {
+            return format_to(ctx.out(), "{}", object.AsArray());
+        }
+        return format_to(ctx.out(), "{}", object.AsScalar());
     }
 
-    static std::string formatNumbersList(const Parser::Key& key, const Parser::Node& node) {
-        std::vector<double> l = node;
-        std::vector<double> loneNumbers;
-        std::string indent = std::string(std::max((uint) 1, node.GetDepth())-1, '\t');
+    template <typename T>
+    static std::string formatNumbersList(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object) {
+        std::vector<T> l = (*object);
+        std::vector<T> loneNumbers;
+        std::string indent = std::string(std::max((uint) 1, object->GetDepth())-1, '\t');
 
         // Sort the list by ascending order.
         // Note: DO NOT sort the list because the order can matter (e.g colors).
@@ -359,5 +435,18 @@ public:
                 return fmt::format("{}{} = {}", indent, key, line);
             }), "\n")
         );
+    }
+};
+
+template <>
+class fmt::formatter<SharedPtr<Parser::Object>> {
+public:
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.begin();
+    }
+
+    template <typename Context>
+    constexpr auto format(const SharedPtr<Parser::Object>& object, Context& ctx) const {
+        return format_to(ctx.out(), "{}", *object);
     }
 };

@@ -37,7 +37,7 @@ Province::Province(int id, sf::Color color, std::string name) {
     m_Flags = ProvinceFlags::NONE;
     m_Terrain = TerrainType::PLAINS;
     m_Holding = ProvinceHolding::NONE;
-    m_OriginalData = MakeShared<Parser::Node>();
+    m_OriginalData = MakeShared<Parser::Object>();
     m_ImagePosition = sf::Vector2i(0, 0);
     m_ImagePixelsCount = 0;
 }
@@ -119,7 +119,7 @@ std::string Province::GetOriginalFilePath() const {
     return m_OriginalFilePath;
 }
 
-SharedPtr<Parser::Node> Province::GetOriginalData() const {
+SharedPtr<Parser::Object> Province::GetOriginalData() const {
     return m_OriginalData;
 }
 
@@ -127,8 +127,8 @@ void Province::SetOriginalFilePath(const std::string& filePath) {
     m_OriginalFilePath = filePath;
 }
 
-void Province::SetOriginalData(const Parser::Node& data) {
-    m_OriginalData = MakeShared<Parser::Node>(data);
+void Province::SetOriginalData(SharedPtr<Parser::Object> data) {
+    m_OriginalData = data;
 }
 
 sf::Vector2i Province::GetImagePosition() const {

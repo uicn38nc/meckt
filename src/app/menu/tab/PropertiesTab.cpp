@@ -205,7 +205,7 @@ void PropertiesTab::RenderTitles() {
                     const auto& AddNewDate = [&]() {
                         try {
                             Date newDate = Date(date);
-                            title->AddHistory(newDate, Parser::Node());
+                            title->AddHistory(newDate, MakeShared<Parser::Object>());
                             isDateValid = true;
                         }
                         catch(std::exception& e) {
@@ -249,7 +249,7 @@ void PropertiesTab::RenderTitles() {
                             ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 10);
                             if(ImGui::InputTextMultiline("data", &historyStates[stateKey].rawData, ImVec2(0,0), ImGuiInputTextFlags_AllowTabInput)) {
                                 try {
-                                    Parser::Node newData = Parser::Parse(historyStates[stateKey].rawData);
+                                    SharedPtr<Parser::Object> newData = Parser::Parse(historyStates[stateKey].rawData);
                                     historyStates[stateKey].parsingError = "";
                                     title->AddHistory(date, newData);
                                 }

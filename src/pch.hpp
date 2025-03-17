@@ -1,5 +1,6 @@
 #include <iostream>
 #include <unordered_map>
+#include <list>
 #include <memory>
 #include <string>
 #include <math.h>
@@ -31,6 +32,7 @@ typedef unsigned int uint;
 #include "util/Date.hpp"
 #include "util/ScopedString.hpp"
 #include "util/Image.hpp"
+#include "util/OrderedMap.hpp"
 #include "app/Configuration.hpp"
 
 #include "app/map/TitleType.hpp"
@@ -45,10 +47,11 @@ class App;
 
 namespace Parser {
     class Token;
-    class Node;
-    class AbstractValueHolder;
-    class NodeHolder;
-    class LeafHolder;
+    class Object;
+    class AbstractHolder;
+    class ScalarHolder;
+    class ArrayHolder;
+    class ObjectHolder;
 }
 
 class Mod;
