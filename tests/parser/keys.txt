@@ -1,8 +1,11 @@
 10 = key1
+3.125 = key2
 
-string1 = key2
-# "string2" = key3
+yes = key3
 
-14.8.19 = key4
+string1 = key4
+"string2" = key5
 
-culture:roman = key6
+14.8.19 = key6
+
+culture:roman = key7

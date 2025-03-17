@@ -1,5 +1,11 @@
-numbers = { 10 20 }
-numbers = { 50 }
+ints = { 10 20 }
+ints = { 50 }
+
+decimals = { 3.125 5.0 }
+decimals = { 2.7 }
+
+booleans = { yes no }
+booleans = { no }
 
 character = {
     trait = greedy
@@ -7,8 +13,11 @@ character = {
     trait = brave
 }
 
-booleans = { yes no }
-booleans = { no }
+# dates = { 10.1.1 }
+# dates = { 10.1.2 }
+
+# scoped_strings = { culture:roman }
+# scoped_strings = { culture:breton }
 
 holy_order_names = {
     { name = "holy_order_name1" coat_of_arms = "holy_order_coa1" }
