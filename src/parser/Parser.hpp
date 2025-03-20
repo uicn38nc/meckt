@@ -243,9 +243,9 @@ public:
     template <typename Context>
     constexpr auto format(const Parser::Scalar& key, Context& ctx) const {
         switch((Parser::ObjectType) key.index()) {
-            case Parser::ObjectType::INT: return format_to(ctx.out(), "{}", std::get<double>(key));
+            case Parser::ObjectType::INT: return format_to(ctx.out(), "{}", std::get<int>(key));
             case Parser::ObjectType::DECIMAL: return format_to(ctx.out(), "{}", std::get<double>(key));
-            case Parser::ObjectType::BOOL: return format_to(ctx.out(), "{}", std::get<double>(key));
+            case Parser::ObjectType::BOOL: return format_to(ctx.out(), "{}", (std::get<bool>(key) ? "yes" : "no"));
             case Parser::ObjectType::STRING: return format_to(ctx.out(), "{}", std::get<std::string>(key));
             case Parser::ObjectType::DATE: return format_to(ctx.out(), "{}", std::get<Date>(key));
             case Parser::ObjectType::SCOPED_STRING: return format_to(ctx.out(), "{}", std::get<ScopedString>(key));
@@ -311,12 +311,18 @@ public:
                         return fmt::format("{}", v);
                     }), " ")
                 );
-            case Parser::ObjectType::OBJECT:
-                return format_to(ctx.out(), "{{\n{}\n}}", fmt::join(
+            case Parser::ObjectType::OBJECT: {
+                const auto& objects = std::get<std::vector<SharedPtr<Parser::Object>>>(array);
+                if(objects.empty())
+                    return format_to(ctx.out(), "{{ }}");
+                std::string indent = std::string(std::max((uint) 1, objects.front()->GetDepth())-2, '\t');
+                return format_to(ctx.out(), "{{\n{}\n{}}}", fmt::join(
                     std::views::transform(std::get<std::vector<SharedPtr<Parser::Object>>>(array), [](const auto& object) {
                         return formatObject(object);
-                    }), "\n")
+                    }), "\n"),
+                    indent
                 );
+            }
             default:
                 return format_to(ctx.out(), "");
         }
@@ -374,12 +380,12 @@ public:
                     std::string(std::max((uint) 1, p.second.second->GetDepth())-1, '\t'), // Indentation
                     p.first, // Key
                     p.second.first, // Operator
-                    p.second.second // Value
+                    *p.second.second // Value
                 );
             });
             if(object.IsRoot())
                 return format_to(ctx.out(), "{}", fmt::join(v, "\n"));
-            return format_to(ctx.out(), "{{\n{}\n{}}}", fmt::join(v, "\n"), std::string(std::max((uint) 0, object.GetDepth())-1, '\t'));
+            return format_to(ctx.out(), "{{\n{}\n{}}}", fmt::join(v, "\n"), std::string(std::max((uint) 1, object.GetDepth())-1, '\t'));
         }
         else if(object.Is(Parser::ObjectType::ARRAY)) {
             return format_to(ctx.out(), "{}", object.AsArray());
@@ -423,7 +429,7 @@ public:
         }
 
         if(!loneNumbers.empty()) {
-            lines.push_back(fmt::format("{} {{ {} }}", (lines.empty() ? "" : "LIST"), fmt::join(
+            lines.push_back(fmt::format("{}{{ {} }}", (lines.empty() ? "" : "LIST "), fmt::join(
                 std::views::transform(loneNumbers, [](const auto& v) {
                     return fmt::format("{}", v);
                 }), " ")
