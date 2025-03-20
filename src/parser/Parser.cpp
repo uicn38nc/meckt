@@ -653,6 +653,7 @@ SharedPtr<Object> Parser::Parse(const std::string& content) {
     std::deque<PToken> tokens = Parser::Lex(content);
     SharedPtr<Object> object = Parse(tokens);
     object->SetDepth(0);
+    object->SetRoot(true);
     return object;
 }
 
@@ -1219,5 +1220,37 @@ void Parser::Tests() {
         throw std::runtime_error(fmt::format("Failed to parse 'ranges.txt'\n{}", e.what()));
     }
     
-    // exit(0);
+    // Tests : Formatting
+    try {
+        data = Parser::ParseFile(dir + "formatting.txt");
+
+        ASSERT("int", "10", fmt::format("{}", data->GetObject("int")));
+        ASSERT("decimal", "3.1415", fmt::format("{}", data->GetObject("decimal")));
+        ASSERT("yes", "yes", fmt::format("{}", data->GetObject("bool1")));
+        ASSERT("no", "no", fmt::format("{}", data->GetObject("bool2")));
+        ASSERT("string", "word", fmt::format("{}", data->GetObject("string")));
+        ASSERT("quoted string", "\"Hello World!\"", fmt::format("{}", data->GetObject("quoted_string")));
+        ASSERT("date", "14.8.19", fmt::format("{}", data->GetObject("date")));
+        ASSERT("scoped string", "culture:roman", fmt::format("{}", data->GetObject("scoped_string")));
+        
+        ASSERT("int list", "{ 10 2 5 }", fmt::format("{}", data->GetObject("int_list")));
+        ASSERT("decimal list", "{ 1.1 1.3 1.2 }", fmt::format("{}", data->GetObject("decimal_list")));
+        ASSERT("bool list", "{ yes yes no }", fmt::format("{}", data->GetObject("bool_list")));
+        ASSERT("string list", "{ word1 word2 word3 }", fmt::format("{}", data->GetObject("string_list")));
+
+        ASSERT("eq operator", "=", fmt::format("{}", data->GetOperator("op1")));
+        ASSERT("lt operator", "<", fmt::format("{}", data->GetOperator("op2")));
+        ASSERT("le operator", "<=", fmt::format("{}", data->GetOperator("op3")));
+        ASSERT("gt operator", ">", fmt::format("{}", data->GetOperator("op4")));
+        ASSERT("ge operator", ">=", fmt::format("{}", data->GetOperator("op5")));
+
+        ASSERT("character", "{\n\tname = Gaius\n\tculture = culture:roman\n\tadd_trait = { greedy brave }\n\t14.8.19 = {\n\t\tbirth = yes\n\t}\n\tnumbers = { -10 24 24213421 }\n\tnames = {\n\t\t{ name = a }\n\t\t{ name = b }\n\t}\n}", fmt::format("{}", data->GetObject("character")));
+        ASSERT("depth", "{\n\tdepth2 = {\n\t\tdepth3a = {\n\t\t\tdepth4 = {\n\n\t\t\t}\n\t\t}\n\t\tdepth3b = {\n\n\t\t}\n\t}\n}", fmt::format("{}", data->GetObject("depth1")));
+        ASSERT("file", "int = 10\ndecimal = 3.1415\nbool1 = yes\nbool2 = no\nstring = word\nquoted_string = \"Hello World!\"\ndate = 14.8.19\nscoped_string = culture:roman\nint_list = { 10 2 5 }\ndecimal_list = { 1.1 1.3 1.2 }\nbool_list = { yes yes no }\nstring_list = { word1 word2 word3 }\nop1 = 0\nop2 < 0\nop3 <= 0\nop4 > 0\nop5 >= 0\ncharacter = {\n\tname = Gaius\n\tculture = culture:roman\n\tadd_trait = { greedy brave }\n\t14.8.19 = {\n\t\tbirth = yes\n\t}\n\tnumbers = { -10 24 24213421 }\n\tnames = {\n\t\t{ name = a }\n\t\t{ name = b }\n\t}\n}\ndepth1 = {\n\tdepth2 = {\n\t\tdepth3a = {\n\t\t\tdepth4 = {\n\n\t\t\t}\n\t\t}\n\t\tdepth3b = {\n\n\t\t}\n\t}\n}", fmt::format("{}", data));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'formatting.txt'\n{}", e.what()));
+    }
+    
+    exit(0);
 }
