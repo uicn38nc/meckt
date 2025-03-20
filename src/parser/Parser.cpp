@@ -1251,6 +1251,17 @@ void Parser::Tests() {
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'formatting.txt'\n{}", e.what()));
     }
+
+    // Tests : Order
+    try {
+        data = Parser::ParseFile(dir + "order.txt");
+
+        ASSERT("order", "[key1, key2, key0, key3]", SerializeList(data->GetKeys()));
+        ASSERT("order 2", "[key2, key1]", SerializeList(data->GetObject("key3")->GetKeys()));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'order.txt'\n{}", e.what()));
+    }
     
-    exit(0);
+    // exit(0);
 }
