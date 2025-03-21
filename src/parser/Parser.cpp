@@ -11,37 +11,37 @@ using namespace Parser::Impl;
 Object::Object() :
     m_Value(MakeShared<ObjectHolder>()),
     m_Depth(0),
-    m_IsRoot(false)
+    m_IsRoot(true)
 {}
 
 Object::Object(const Object& object) :
     m_Value((object.m_Value == nullptr) ? nullptr : object.m_Value->Copy()),
     m_Depth(object.m_Depth),
-    m_IsRoot(false)
+    m_IsRoot(object.m_IsRoot)
 {}
 
 Object::Object(const Scalar& value) : 
     m_Value(MakeShared<ScalarHolder>(value)),
     m_Depth(0),
-    m_IsRoot(false)
+    m_IsRoot(true)
 {}
 
 Object::Object(const Array& value) : 
     m_Value(MakeShared<ArrayHolder>(value)),
     m_Depth(0),
-    m_IsRoot(false)
+    m_IsRoot(true)
 {}
 
 Object::Object(const std::vector<SharedPtr<Object>>& value) : 
     m_Value(MakeShared<ArrayHolder>(value)),
     m_Depth(0),
-    m_IsRoot(false)
+    m_IsRoot(true)
 {}
 
 Object::Object(const sf::Color& color) : 
     m_Value(MakeShared<ArrayHolder>(std::vector<int>{(int) color.r, (int) color.g, (int) color.b})), 
     m_Depth(0),
-    m_IsRoot(false)
+    m_IsRoot(true)
 {}
 
 ObjectType Object::GetType() const {
@@ -980,6 +980,134 @@ bool Parser::Impl::IsList(std::deque<PToken>& tokens) {
         || firstToken->Is(TokenType::LEFT_BRACE);
 }
 
+template <typename T>
+std::string Parser::Format::FormatNumbersList(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object, uint depth) {
+    std::vector<T> l = (*object);
+    std::vector<T> loneNumbers;
+    std::string indent = std::string(depth, '\t');
+
+    // Sort the list by ascending order.
+    // Note: DO NOT sort the list because the order can matter (e.g colors).
+    // std::sort(l.begin(), l.end(), [=](double a, double b) { return a < b; });
+
+    // Make a list of the lines to build the list
+    // with LIST and RANGE depending on the values.
+    std::vector<std::string> lines;
+    int start = 0;
+    int current = 1;
+
+    while(current <= l.size()) {
+        // Count the number of elements in the current range and make
+        // a range only if there are at least 3 elements.
+        int n = current - start;
+
+        // Push a new line if a streak is broken or if it is the last element of the vector.
+        if(current == l.size() || l[current-1]+1 != l[current]) {
+            if(n > 3) {
+                lines.push_back(fmt::format("RANGE {{ {}  {} }}", l[start], l[current-1]));
+            }
+            else {
+                for(int i = start; i < current; i++)
+                    loneNumbers.push_back(l[i]);
+            }
+            start = current;
+        }
+        current++;
+    }
+
+    if(!loneNumbers.empty()) {
+        lines.push_back(fmt::format("{}{{ {} }}", (lines.empty() ? "" : "LIST "), fmt::join(
+            std::views::transform(loneNumbers, [](const auto& v) {
+                return fmt::format("{}", v);
+            }), " ")
+        ));
+    }
+
+    return fmt::format("{}", fmt::join(
+        std::views::transform(lines, [indent, key](const auto& line) {
+            return fmt::format("{}{} = {}", indent, key, line);
+        }), "\n")
+    );
+}
+
+template std::string Parser::Format::FormatNumbersList<int>(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object, uint depth);
+template std::string Parser::Format::FormatNumbersList<double>(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object, uint depth);
+
+template <typename T>
+bool Parser::Format::IsRange(const std::vector<T>& numbers) {
+    if(numbers.size() < 3)
+        return false;
+    for(int i = 1; i < numbers.size(); i++) {
+        if(numbers[i] != numbers[i-1]+1)
+            return false;
+    }
+    return true;
+}
+
+template bool Parser::Format::IsRange<int>(const std::vector<int>& numbers);
+template bool Parser::Format::IsRange<double>(const std::vector<double>& numbers);
+
+std::string Parser::Format::FormatObject(const SharedPtr<Object>& object, uint depth, bool isRoot) {
+    if(object->Is(Parser::ObjectType::OBJECT)) {
+        // An empty object is an empty-string on first depth, { } otherwise.
+        if(object->GetEntries().empty())
+            return (depth > 0) ? "{ }" : "";
+
+        // Format recursively objects in the current object.
+        auto v = std::views::transform(object->GetEntries(), [depth](const auto& p) {
+            if(p.second.second->Is(Parser::ObjectType::ARRAY)) {
+                if(p.second.second->GetArrayType() == Parser::ObjectType::INT)
+                    return FormatNumbersList<int>(p.first, p.second.second, depth);
+                if(p.second.second->GetArrayType() == Parser::ObjectType::DECIMAL)
+                    return FormatNumbersList<double>(p.first, p.second.second, depth);
+            }
+            return fmt::format(
+                FMT_COMPILE("{}{} {} {}"),
+                std::string(depth, '\t'), // Indentation
+                p.first, // Key
+                p.second.first, // Operator
+                FormatObject(p.second.second, depth+1, false) // Value
+            );
+        });
+
+        // On first depth, the object is formatted as ..., instead of {...} 
+        if(depth == 0 || isRoot)
+            return fmt::format("{}", fmt::join(v, "\n"));
+        return fmt::format("{{\n{}\n{}}}", fmt::join(v, "\n"), std::string(depth-1, '\t'));
+    }
+    else if(object->Is(Parser::ObjectType::ARRAY)) {
+        if(object->GetArrayType() == Parser::ObjectType::OBJECT) {
+            const std::vector<SharedPtr<Parser::Object>>& objects = (*object);
+            if(objects.empty())
+                return "{ }";
+            auto v = std::views::transform(objects, [depth](const auto& o) {
+                return Parser::Format::FormatObjectFlat(o, depth+1);
+            });
+            return fmt::format("{{\n{}\n{}}}", fmt::join(v, "\n"), std::string(std::max(0U, depth-1), '\t'));
+        }
+        return fmt::format("{}", object->AsArray());
+    }
+    return fmt::format("{}", object->AsScalar());
+}
+
+std::string Parser::Format::FormatObjectFlat(const SharedPtr<Object>& object, uint depth) {
+    if(object->Is(Parser::ObjectType::OBJECT)) {
+        auto v = std::views::transform(object->GetEntries(), [depth](const auto& p) {
+            return fmt::format(
+                FMT_COMPILE("{} {} {}"),
+                p.first, // Key
+                p.second.first, // Operator
+                FormatObjectFlat(p.second.second, depth+1) // Value
+            );
+        });
+        return fmt::format("{}{{ {} }}", std::string(std::max(0U, depth-1), '\t'), fmt::join(v, " "));
+    }
+    else if(object->Is(Parser::ObjectType::ARRAY)) {
+        return fmt::format("{}", object->AsArray());
+    }
+    return fmt::format("{}", object->AsScalar());
+}
+
 void Parser::Benchmark() {
     sf::Clock clock;
 
@@ -1118,7 +1246,7 @@ void Parser::Tests() {
         ASSERT("string list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data->GetArray<std::string>("string_list", {})));
         // ASSERT("date list", "[breton, french, \"Lorem ipsum dolor sit amet\", norse]", SerializeList(data->GetArray<Date>("date_list", {})));
         // ASSERT("scoped string list", "[culture:roman]", SerializeList(data->GetArray<ScopedString>("scoped_string_list", {})));
-        ASSERT("node list", "[{name = augustus}, {name = claudius}, {name = nero}]", SerializeList(data->GetArray<SharedPtr<Object>>("node_list", {})));
+        ASSERT("node list", "[name = augustus, name = claudius, name = nero]", SerializeList(data->GetArray<SharedPtr<Object>>("node_list", {})));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'arrays.txt'\n{}", e.what()));
@@ -1174,7 +1302,7 @@ void Parser::Tests() {
         ASSERT("string append list", "[greedy, compassionate, brave]", SerializeList(data->GetObject("character")->GetArray<std::string>("trait", {})));
         // ASSERT("date append list", "[]", SerializeList(data->GetArray<Date>("dates", {})));
         // ASSERT("scoped string append list", "[]", SerializeList(data->GetArray<ScopedString>("scoped_strings", {})));
-        ASSERT("node append list", "[{name = \"holy_order_name1\"coat_of_arms = \"holy_order_coa1\"}, {name = \"holy_order_name2\"coat_of_arms = \"holy_order_coa2\"}]", SerializeList(data->GetArray<SharedPtr<Object>>("holy_order_names", {})));
+        ASSERT("node append list", "[name = \"holy_order_name1\"coat_of_arms = \"holy_order_coa1\", name = \"holy_order_name2\"coat_of_arms = \"holy_order_coa2\"]", SerializeList(data->GetArray<SharedPtr<Object>>("holy_order_names", {})));
         // fmt::println("{}", data->GetObject("test"));
     }
     catch(std::exception& e) {
@@ -1214,14 +1342,14 @@ void Parser::Tests() {
         ASSERT("transform to range", "RANGE { 1 5 }", fmt::format("{}", data->GetObject("l1")));
         ASSERT("concatenate list", "[1, 2, 3, 4, 5, 6, 7, 8]", SerializeList(data->GetArray<double>("l2", {})));
         ASSERT("transform to range", "RANGE { 1 8 }", fmt::format("{}", data->GetObject("l2")));
-        ASSERT("range list", "{\n\tl3 = RANGE { 5  11 }\n}", fmt::format("{}", data->GetObject("l3")));
+        ASSERT("range list", "l3 = RANGE { 5  11 }", fmt::format("{}", data->GetObject("l3")));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'ranges.txt'\n{}", e.what()));
     }
     
     // Tests : Formatting
-    try {
+    // try {
         data = Parser::ParseFile(dir + "formatting.txt");
 
         ASSERT("int", "10", fmt::format("{}", data->GetObject("int")));
@@ -1244,13 +1372,13 @@ void Parser::Tests() {
         ASSERT("gt operator", ">", fmt::format("{}", data->GetOperator("op4")));
         ASSERT("ge operator", ">=", fmt::format("{}", data->GetOperator("op5")));
 
-        ASSERT("character", "{\n\tname = Gaius\n\tculture = culture:roman\n\tadd_trait = { greedy brave }\n\t14.8.19 = {\n\t\tbirth = yes\n\t}\n\tnumbers = { -10 24 24213421 }\n\tnames = {\n\t\t{ name = a }\n\t\t{ name = b }\n\t}\n}", fmt::format("{}", data->GetObject("character")));
-        ASSERT("depth", "{\n\tdepth2 = {\n\t\tdepth3a = {\n\t\t\tdepth4 = {\n\n\t\t\t}\n\t\t}\n\t\tdepth3b = {\n\n\t\t}\n\t}\n}", fmt::format("{}", data->GetObject("depth1")));
-        ASSERT("file", "int = 10\ndecimal = 3.1415\nbool1 = yes\nbool2 = no\nstring = word\nquoted_string = \"Hello World!\"\ndate = 14.8.19\nscoped_string = culture:roman\nint_list = { 10 2 5 }\ndecimal_list = { 1.1 1.3 1.2 }\nbool_list = { yes yes no }\nstring_list = { word1 word2 word3 }\nop1 = 0\nop2 < 0\nop3 <= 0\nop4 > 0\nop5 >= 0\ncharacter = {\n\tname = Gaius\n\tculture = culture:roman\n\tadd_trait = { greedy brave }\n\t14.8.19 = {\n\t\tbirth = yes\n\t}\n\tnumbers = { -10 24 24213421 }\n\tnames = {\n\t\t{ name = a }\n\t\t{ name = b }\n\t}\n}\ndepth1 = {\n\tdepth2 = {\n\t\tdepth3a = {\n\t\t\tdepth4 = {\n\n\t\t\t}\n\t\t}\n\t\tdepth3b = {\n\n\t\t}\n\t}\n}", fmt::format("{}", data));
-    }
-    catch(std::exception& e) {
-        throw std::runtime_error(fmt::format("Failed to parse 'formatting.txt'\n{}", e.what()));
-    }
+        ASSERT("character", "name = Gaius\nculture = culture:roman\nadd_trait = { greedy brave }\n14.8.19 = {\n\tbirth = yes\n}\nnumbers = { -10 24 24213421 }\nnames = {\n\t{ name = a }\n\t{ name = b }\n}", fmt::format("{}", data->GetObject("character")));
+        ASSERT("depth", "depth2 = {\n\tdepth3a = {\n\t\tdepth4 = { }\n\t}\n\tdepth3b = { }\n}", fmt::format("{}", data->GetObject("depth1")));
+        ASSERT("file", "int = 10\ndecimal = 3.1415\nbool1 = yes\nbool2 = no\nstring = word\nquoted_string = \"Hello World!\"\ndate = 14.8.19\nscoped_string = culture:roman\nint_list = { 10 2 5 }\ndecimal_list = { 1.1 1.3 1.2 }\nbool_list = { yes yes no }\nstring_list = { word1 word2 word3 }\nop1 = 0\nop2 < 0\nop3 <= 0\nop4 > 0\nop5 >= 0\ncharacter = {\n\tname = Gaius\n\tculture = culture:roman\n\tadd_trait = { greedy brave }\n\t14.8.19 = {\n\t\tbirth = yes\n\t}\n\tnumbers = { -10 24 24213421 }\n\tnames = {\n\t\t{ name = a }\n\t\t{ name = b }\n\t}\n}\ndepth1 = {\n\tdepth2 = {\n\t\tdepth3a = {\n\t\t\tdepth4 = { }\n\t\t}\n\t\tdepth3b = { }\n\t}\n}", fmt::format("{}", data));
+    // }
+    // catch(std::exception& e) {
+    //     throw std::runtime_error(fmt::format("Failed to parse 'formatting.txt'\n{}", e.what()));
+    // }
 
     // Tests : Order
     try {

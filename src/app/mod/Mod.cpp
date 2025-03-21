@@ -926,8 +926,11 @@ void Mod::ExportProvincesHistory() {
         data->Put("holding", ProvinceHoldingLabels[(int) province->GetHolding()]);
         data->SetDepth(1);
 
+        SharedPtr<Parser::Object> object = MakeShared<Parser::Object>();
+        object->Put(province->GetId(), data);
+
         fmt::println(file, "# {}", province->GetName());
-        fmt::println(file, "{} = {}", province->GetId(), data);
+        fmt::println(file, "{}", object);
     }
 
     for(auto& [key, file] : files)
@@ -995,12 +998,18 @@ void Mod::ExportTitlesHistory() {
             files[filePath] = std::ofstream(filePath, std::ios::out);
         std::ofstream& file = files[filePath];
         
-        SharedPtr<Parser::Object> history = SharedPtr<Parser::Object>();
+        SharedPtr<Parser::Object> history = MakeShared<Parser::Object>();
         for(auto const& [date, data] : title->GetHistory()) {
             history->Put(date, data);
         }
-        history->SetDepth(1);
-        fmt::println(file, "{} = {}", title->GetName(), history);
+
+        // Because of indentation and curly brackets, we
+        // need to put the history inside an object and
+        // print that object.
+        SharedPtr<Parser::Object> object = MakeShared<Parser::Object>();
+        object->Put(title->GetName(), history);
+
+        fmt::println(file, "{}", object);
     }
 
     for(auto& [key, file] : files)
@@ -1010,8 +1019,6 @@ void Mod::ExportTitlesHistory() {
 void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int depth) {
     std::string indent = std::string(depth, '\t');
     SharedPtr<Parser::Object> data = (title->GetOriginalData() == nullptr) ? MakeShared<Parser::Object>() : title->GetOriginalData();
-    data->SetDepth(depth);
-    data->SetRoot(true);
 
     #define EXPORT_PROPERTIES(key, value) fmt::println(file, "{}{} = {}", indent, key, value)
 
@@ -1023,7 +1030,7 @@ void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int de
         // TODO: warning if there is no province with this id.
 
         if(!data->GetEntries().empty())
-            fmt::println(file, "{}", data);
+            fmt::println(file, "{}", Parser::Format::FormatObject(data, depth, true));
     }
     else {
         SharedPtr<HighTitle> highTitle = CastSharedPtr<HighTitle>(title);
@@ -1047,7 +1054,7 @@ void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int de
             EXPORT_PROPERTIES("capital", "yes");
 
         if(!data->GetEntries().empty())
-            fmt::println(file, "\n{}", data);
+            fmt::println(file, "\n{}", Parser::Format::FormatObject(data, depth, true));
 
         for(const auto& dejureTitle : highTitle->GetDejureTitles()) {
             fmt::println(file, "\n{}{} = {{", indent, dejureTitle->GetName());

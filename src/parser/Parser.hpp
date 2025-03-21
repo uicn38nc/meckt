@@ -206,6 +206,17 @@ namespace Parser {
         bool IsList(std::deque<PToken>& tokens);
     }
 
+    namespace Format {
+        template <typename T>
+        std::string FormatNumbersList(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object, uint depth);
+
+        template <typename T>
+        bool IsRange(const std::vector<T>& numbers);
+
+        std::string FormatObject(const SharedPtr<Object>& object, uint depth, bool isRoot = false);
+        std::string FormatObjectFlat(const SharedPtr<Object>& object, uint depth);
+    }
+
     void Benchmark();
     void Tests();
 }
@@ -213,6 +224,7 @@ namespace Parser {
 ///////////////////////////////////////////
 //          Formatters for fmt           //
 ///////////////////////////////////////////
+
 template <>
 class fmt::formatter<Parser::Operator> {
 public:
@@ -267,7 +279,7 @@ public:
         switch((Parser::ObjectType) array.index()) {
             case Parser::ObjectType::INT: {
                 const std::vector<int>& numbers = std::get<std::vector<int>>(array);
-                if(isRange<int>(numbers)) {
+                if(Parser::Format::IsRange<int>(numbers)) {
                     return format_to(ctx.out(), "RANGE {{ {} {} }}", numbers[0], numbers[numbers.size()-1]);
                 }
                 return format_to(ctx.out(), "{{ {} }}", fmt::join(
@@ -278,7 +290,7 @@ public:
             }
             case Parser::ObjectType::DECIMAL: {
                 const std::vector<double>& numbers = std::get<std::vector<double>>(array);
-                if(isRange<double>(numbers)) {
+                if(Parser::Format::IsRange<double>(numbers)) {
                     return format_to(ctx.out(), "RANGE {{ {} {} }}", numbers[0], numbers[numbers.size()-1]);
                 }
                 return format_to(ctx.out(), "{{ {} }}", fmt::join(
@@ -315,46 +327,15 @@ public:
                 const auto& objects = std::get<std::vector<SharedPtr<Parser::Object>>>(array);
                 if(objects.empty())
                     return format_to(ctx.out(), "{{ }}");
-                std::string indent = std::string(std::max((uint) 1, objects.front()->GetDepth())-2, '\t');
-                return format_to(ctx.out(), "{{\n{}\n{}}}", fmt::join(
-                    std::views::transform(std::get<std::vector<SharedPtr<Parser::Object>>>(array), [](const auto& object) {
-                        return formatObject(object);
-                    }), "\n"),
-                    indent
+                return format_to(ctx.out(), "{{\n{}\n}}", fmt::join(
+                    std::views::transform(objects, [](const auto& v) {
+                        return Parser::Format::FormatObjectFlat(v, 0);
+                    }), "\n")
                 );
             }
             default:
                 return format_to(ctx.out(), "");
         }
-    }
-
-    static std::string formatObject(const SharedPtr<Parser::Object>& object) {
-        if(object->Is(Parser::ObjectType::OBJECT)) {
-            auto v = std::views::transform(object->GetEntries(), [](const auto& p) {
-                return fmt::format(
-                    FMT_COMPILE("{} {} {}"),
-                    p.first, // Key
-                    p.second.first, // Operator
-                    formatObject(p.second.second) // Value
-                );
-            });
-            return fmt::format("{}{{ {} }}", std::string(std::max((uint) 1, object->GetDepth())-1, '\t'), fmt::join(v, " "));
-        }
-        else if(object->Is(Parser::ObjectType::ARRAY)) {
-            return fmt::format("{}", object->AsArray());
-        }
-        return fmt::format("{}", object->AsScalar());
-    }
-
-    template <typename T>
-    static bool isRange(const std::vector<T>& numbers) {
-        if(numbers.size() < 3)
-            return false;
-        for(int i = 1; i < numbers.size(); i++) {
-            if(numbers[i] != numbers[i-1]+1)
-                return false;
-        }
-        return true;
     }
 };
 
@@ -367,80 +348,7 @@ public:
 
     template <typename Context>
     constexpr auto format(const Parser::Object& object, Context& ctx) const {
-        if(object.Is(Parser::ObjectType::OBJECT)) {
-            auto v = std::views::transform(object.GetEntries(), [](const auto& p) {
-                if(p.second.second->Is(Parser::ObjectType::ARRAY)) {
-                    if(p.second.second->GetArrayType() == Parser::ObjectType::INT)
-                        return formatNumbersList<int>(p.first, p.second.second);
-                    if(p.second.second->GetArrayType() == Parser::ObjectType::DECIMAL)
-                        return formatNumbersList<double>(p.first, p.second.second);
-                }
-                return fmt::format(
-                    FMT_COMPILE("{}{} {} {}"),
-                    std::string(std::max((uint) 1, p.second.second->GetDepth())-1, '\t'), // Indentation
-                    p.first, // Key
-                    p.second.first, // Operator
-                    *p.second.second // Value
-                );
-            });
-            if(object.IsRoot())
-                return format_to(ctx.out(), "{}", fmt::join(v, "\n"));
-            return format_to(ctx.out(), "{{\n{}\n{}}}", fmt::join(v, "\n"), std::string(std::max((uint) 1, object.GetDepth())-1, '\t'));
-        }
-        else if(object.Is(Parser::ObjectType::ARRAY)) {
-            return format_to(ctx.out(), "{}", object.AsArray());
-        }
-        return format_to(ctx.out(), "{}", object.AsScalar());
-    }
-
-    template <typename T>
-    static std::string formatNumbersList(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object) {
-        std::vector<T> l = (*object);
-        std::vector<T> loneNumbers;
-        std::string indent = std::string(std::max((uint) 1, object->GetDepth())-1, '\t');
-
-        // Sort the list by ascending order.
-        // Note: DO NOT sort the list because the order can matter (e.g colors).
-        // std::sort(l.begin(), l.end(), [=](double a, double b) { return a < b; });
-
-        // Make a list of the lines to build the list
-        // with LIST and RANGE depending on the values.
-        std::vector<std::string> lines;
-        int start = 0;
-        int current = 1;
-
-        while(current <= l.size()) {
-            // Count the number of elements in the current range and make
-            // a range only if there are at least 3 elements.
-            int n = current - start;
-
-            // Push a new line if a streak is broken or if it is the last element of the vector.
-            if(current == l.size() || l[current-1]+1 != l[current]) {
-                if(n > 3) {
-                    lines.push_back(fmt::format("RANGE {{ {}  {} }}", l[start], l[current-1]));
-                }
-                else {
-                    for(int i = start; i < current; i++)
-                        loneNumbers.push_back(l[i]);
-                }
-                start = current;
-            }
-            current++;
-        }
-
-        if(!loneNumbers.empty()) {
-            lines.push_back(fmt::format("{}{{ {} }}", (lines.empty() ? "" : "LIST "), fmt::join(
-                std::views::transform(loneNumbers, [](const auto& v) {
-                    return fmt::format("{}", v);
-                }), " ")
-            ));
-        }
-
-        return fmt::format("{}", fmt::join(
-            std::views::transform(lines, [indent, key](const auto& line) {
-                return fmt::format("{}{} = {}", indent, key, line);
-            }), "\n")
-        );
+        return format_to(ctx.out(), "{}", Parser::Format::FormatObject(MakeShared<Parser::Object>(object), 0, true));
     }
 };
 
@@ -453,6 +361,6 @@ public:
 
     template <typename Context>
     constexpr auto format(const SharedPtr<Parser::Object>& object, Context& ctx) const {
-        return format_to(ctx.out(), "{}", *object);
+        return format_to(ctx.out(), "{}", Parser::Format::FormatObject(object, 0, true));
     }
 };
