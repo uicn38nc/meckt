@@ -924,7 +924,6 @@ void Mod::ExportProvincesHistory() {
         if(!province->GetCulture().empty()) data->Put("culture", province->GetCulture());
         if(!province->GetReligion().empty()) data->Put("religion", province->GetReligion());
         data->Put("holding", ProvinceHoldingLabels[(int) province->GetHolding()]);
-        data->SetDepth(1);
 
         SharedPtr<Parser::Object> object = MakeShared<Parser::Object>();
         object->Put(province->GetId(), data);

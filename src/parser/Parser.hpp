@@ -50,12 +50,6 @@ namespace Parser {
             ObjectType GetArrayType() const;
             bool Is(ObjectType type) const;
 
-            uint GetDepth() const;
-            void SetDepth(uint depth);
-
-            bool IsRoot() const;
-            void SetRoot(bool isRoot);
-
             void ConvertToArray();
 
             // Functions to use with ArrayHolder or ObjectHolder.
@@ -126,15 +120,12 @@ namespace Parser {
             const SharedPtr<ObjectHolder> GetObjectHolder() const;
 
             SharedPtr<AbstractHolder> m_Value;
-            uint m_Depth;
-            bool m_IsRoot;
     };
 
     class AbstractHolder {
         public:
             virtual ObjectType GetType() const = 0;
             virtual SharedPtr<AbstractHolder> Copy() const = 0;
-            virtual void SetDepth(uint depth) = 0;
     };
 
     class ScalarHolder : public AbstractHolder {
@@ -147,7 +138,6 @@ namespace Parser {
 
             virtual ObjectType GetType() const;
             virtual SharedPtr<AbstractHolder> Copy() const;
-            virtual void SetDepth(uint depth);
 
         private:
             Scalar m_Value;
@@ -163,7 +153,6 @@ namespace Parser {
 
             virtual ObjectType GetType() const;
             virtual SharedPtr<AbstractHolder> Copy() const;
-            virtual void SetDepth(uint depth);
 
             ObjectType GetArrayType() const;
 
@@ -181,7 +170,6 @@ namespace Parser {
 
             virtual ObjectType GetType() const;
             virtual SharedPtr<AbstractHolder> Copy() const;
-            virtual void SetDepth(uint depth);
 
         private:
             OrderedMap<Scalar, std::pair<Operator, SharedPtr<Object>>> m_Values;

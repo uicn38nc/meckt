@@ -91,7 +91,6 @@ std::map<Date, SharedPtr<Parser::Object>>& Title::GetHistory() {
 
 void Title::AddHistory(Date date, SharedPtr<Parser::Object> data) {
     m_History[date] = data;
-    m_History[date]->SetDepth(0);
 }
 
 void Title::RemoveHistory(Date date) {

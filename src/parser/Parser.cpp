@@ -9,39 +9,27 @@ using namespace Parser::Impl;
 ////////////////////////////////
 
 Object::Object() :
-    m_Value(MakeShared<ObjectHolder>()),
-    m_Depth(0),
-    m_IsRoot(true)
+    m_Value(MakeShared<ObjectHolder>())
 {}
 
 Object::Object(const Object& object) :
-    m_Value((object.m_Value == nullptr) ? nullptr : object.m_Value->Copy()),
-    m_Depth(object.m_Depth),
-    m_IsRoot(object.m_IsRoot)
+    m_Value((object.m_Value == nullptr) ? nullptr : object.m_Value->Copy())
 {}
 
 Object::Object(const Scalar& value) : 
-    m_Value(MakeShared<ScalarHolder>(value)),
-    m_Depth(0),
-    m_IsRoot(true)
+    m_Value(MakeShared<ScalarHolder>(value))
 {}
 
 Object::Object(const Array& value) : 
-    m_Value(MakeShared<ArrayHolder>(value)),
-    m_Depth(0),
-    m_IsRoot(true)
+    m_Value(MakeShared<ArrayHolder>(value))
 {}
 
 Object::Object(const std::vector<SharedPtr<Object>>& value) : 
-    m_Value(MakeShared<ArrayHolder>(value)),
-    m_Depth(0),
-    m_IsRoot(true)
+    m_Value(MakeShared<ArrayHolder>(value))
 {}
 
 Object::Object(const sf::Color& color) : 
-    m_Value(MakeShared<ArrayHolder>(std::vector<int>{(int) color.r, (int) color.g, (int) color.b})), 
-    m_Depth(0),
-    m_IsRoot(true)
+    m_Value(MakeShared<ArrayHolder>(std::vector<int>{(int) color.r, (int) color.g, (int) color.b}))
 {}
 
 ObjectType Object::GetType() const {
@@ -56,23 +44,6 @@ ObjectType Object::GetArrayType() const {
 
 bool Object::Is(ObjectType type) const {
     return this->GetType() == type;
-}
-
-uint Object::GetDepth() const {
-    return m_Depth;
-}
-
-void Object::SetDepth(uint depth) {
-    m_Depth = depth;
-    m_Value->SetDepth(depth);
-}
-
-bool Object::IsRoot() const {
-    return m_IsRoot;
-}
-
-void Object::SetRoot(bool isRoot) {
-    m_IsRoot = isRoot;
 }
 
 void Object::ConvertToArray() {
@@ -177,7 +148,10 @@ SharedPtr<Object> Object::Get<SharedPtr<Object>>(const Scalar& key) const {
         throw std::runtime_error("error: invalid use of 'Object::Get' on array.");
     if(!this->Is(ObjectType::OBJECT))
         throw std::runtime_error("error: invalid use of 'Object::Get' on scalar.");
-    return this->GetObjectHolder()->m_Values[key].second;
+    auto it = this->GetObjectHolder()->m_Values.find(key);
+    if(it == this->GetObjectHolder()->m_Values.end())
+        return nullptr;
+    return it->second.second;
 }
 
 template int Object::Get<int>(const Scalar&) const;
@@ -303,7 +277,6 @@ void Object::Put(const Scalar& key, const SharedPtr<Object>& value, Operator op)
     if(!this->Is(ObjectType::OBJECT))
         throw std::runtime_error("error: invalid use of 'Object::Put' on scalar or array.");
     this->GetObjectHolder()->m_Values.insert(key, std::make_pair(op, value));
-    this->GetObjectHolder()->m_Values[key].second->SetDepth(m_Depth + 1);
 }
 
 void Object::Put(const Scalar& key, const Scalar& value, Operator op) {
@@ -496,9 +469,7 @@ Object& Object::operator=(const Scalar& value) {
 }
 
 Object& Object::operator=(const Object& value) {
-    m_Depth = value.GetDepth();
     m_Value = value.GetHolder()->Copy();
-    m_Value->SetDepth(m_Depth);
     return *this;
 }
 
@@ -554,8 +525,6 @@ SharedPtr<AbstractHolder> ScalarHolder::Copy() const {
     return copy;
 }
 
-void ScalarHolder::SetDepth(uint depth) {}
-
 ////////////////////////////////
 //     ArrayHolder class      //
 ////////////////////////////////
@@ -588,15 +557,6 @@ SharedPtr<AbstractHolder> ArrayHolder::Copy() const {
     return copy;
 }
 
-void ArrayHolder::SetDepth(uint depth) {
-    if(this->GetArrayType() == ObjectType::OBJECT) {
-        std::vector<SharedPtr<Object>>& objects = std::get<std::vector<SharedPtr<Object>>>(m_Values);
-        for(auto& object : objects) {
-            object->SetDepth(depth+1);
-        }
-    }
-}
-
 ObjectType ArrayHolder::GetArrayType() const {
     return (ObjectType) m_Values.index();
 }
@@ -627,11 +587,6 @@ SharedPtr<AbstractHolder> ObjectHolder::Copy() const {
     return copy;
 }
 
-void ObjectHolder::SetDepth(uint depth) {
-    for(auto& [key, pair] : m_Values)
-        pair.second->SetDepth(depth + 1);
-}
-
 ////////////////////////////////
 //      Global functions      //
 ////////////////////////////////
@@ -652,8 +607,6 @@ SharedPtr<Object> Parser::ParseFile(std::ifstream& file) {
 SharedPtr<Object> Parser::Parse(const std::string& content) {
     std::deque<PToken> tokens = Parser::Lex(content);
     SharedPtr<Object> object = Parse(tokens);
-    object->SetDepth(0);
-    object->SetRoot(true);
     return object;
 }
 
@@ -670,7 +623,6 @@ SharedPtr<Object> Parser::Parse(std::deque<PToken>& tokens, uint depth) {
         tokens.pop_front();
 
         if(token->Is(TokenType::RIGHT_BRACE)) {
-            values->SetDepth(depth);
             return values;
         }
 
@@ -747,7 +699,6 @@ SharedPtr<Object> Parser::Parse(std::deque<PToken>& tokens, uint depth) {
     if(state == ParsingState::VALUE)
         throw std::runtime_error(fmt::format("error: unexpected end after operator {}.", op));
 
-    values->SetDepth(depth);
     return values;
 }
 
@@ -1184,16 +1135,6 @@ void Parser::Benchmark() {
         
         // Test utf8 characters as value
         fmt::println("utf8 => {}", result->GetObject("utf8"));
-
-        // Test depth
-        fmt::println("depth: {}", result->GetObject("depth")->GetDepth());
-        fmt::println("depth.name: {} {}", result->GetObject("depth")->GetObject("name"), result->GetObject("depth")->GetObject("name")->GetDepth());
-        fmt::println("depth.1: {}", result->GetObject("depth")->GetObject(1.0)->GetDepth());
-        fmt::println("depth.1.name: {} {}", result->GetObject("depth")->GetObject(1.0)->GetObject("name"), result->GetObject("depth")->GetObject(1.0)->GetObject("name")->GetDepth());
-        fmt::println("depth.1.2: {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetDepth());
-        fmt::println("depth.1.2.name: {} {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject("name"), result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject("name")->GetDepth());
-        fmt::println("depth.1.3: {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject(3.0)->GetDepth());
-        fmt::println("depth.1.3.name: {} {}", result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject(3.0)->GetObject("name"), result->GetObject("depth")->GetObject(1.0)->GetObject(2.0)->GetObject(3.0)->GetObject("name")->GetDepth());
         
         fmt::println("operators = {}", result->GetObject("operators"));
     }
@@ -1312,12 +1253,12 @@ void Parser::Tests() {
     // Tests : Depth
     try {
         data = Parser::ParseFile(dir + "depth.txt");
-        ASSERT("initial depth", 0, data->GetDepth());
-        ASSERT("depth 1", 1, data->GetObject("depth1")->GetDepth());
-        ASSERT("depth 2", 2, data->GetObject("depth1")->GetObject("depth2")->GetDepth());
-        ASSERT("depth 3a", 3, data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3a")->GetDepth());
-        ASSERT("depth 3b", 3, data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3b")->GetDepth());
-        ASSERT("depth 4", 4, data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3a")->GetObject("depth4")->GetDepth());
+        ASSERT("initial", 1, data->GetEntries().size());
+        ASSERT("depth 1", true, (data->GetObject("depth1") != nullptr));
+        ASSERT("depth 2", true, (data->GetObject("depth1")->GetObject("depth2") != nullptr));
+        ASSERT("depth 3a", true, (data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3a") != nullptr));
+        ASSERT("depth 3b", true, (data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3b") != nullptr));
+        ASSERT("depth 4", true, (data->GetObject("depth1")->GetObject("depth2")->GetObject("depth3a")->GetObject("depth4") != nullptr));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'depth.txt'\n{}", e.what()));
