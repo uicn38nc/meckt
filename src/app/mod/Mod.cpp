@@ -904,8 +904,47 @@ void Mod::ExportProvincesHistory() {
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
 
-    std::map<std::string, std::ofstream> files;
+    for(const auto& kingdomTitle : m_TitlesByType[TitleType::KINGDOM]) {
+        SharedPtr<HighTitle> kingdomHighTitle = CastSharedPtr<HighTitle>(kingdomTitle);
 
+        // Provinces history are grouped by kingdoms.
+        std::string filePath = fmt::format("{}/00_{}_prov.txt", dir, kingdomTitle->GetName());
+        std::ofstream file = std::ofstream(filePath, std::ios::out);
+
+        for(const auto& duchyTitle : kingdomHighTitle->GetDejureTitles()) {
+            SharedPtr<HighTitle> duchyHighTitle = CastSharedPtr<HighTitle>(duchyTitle);
+
+            fmt::println(file, "##### {} ############################\n", duchyTitle->GetName());
+
+            for(const auto& countyTitle : duchyHighTitle->GetDejureTitles()) {
+                SharedPtr<HighTitle> countyHighTitle = CastSharedPtr<HighTitle>(countyTitle);
+                fmt::println(file, "### {}", countyTitle->GetName());
+
+                for(const auto& baronyTitle : countyHighTitle->GetDejureTitles()) {
+                    SharedPtr<BaronyTitle> baronyBaronyTitle = CastSharedPtr<BaronyTitle>(baronyTitle);
+                    SharedPtr<Province> province = m_ProvincesByIds[baronyBaronyTitle->GetProvinceId()];
+        
+                    if(!province->HasFlag(ProvinceFlags::LAND) || province->HasFlag(ProvinceFlags::IMPASSABLE))
+                        continue;
+                    
+                    SharedPtr<Parser::Object> data = province->GetOriginalData();
+                    if(!province->GetCulture().empty()) data->Put("culture", province->GetCulture());
+                    if(!province->GetReligion().empty()) data->Put("religion", province->GetReligion());
+                    data->Put("holding", ProvinceHoldingLabels[(int) province->GetHolding()]);
+
+                    SharedPtr<Parser::Object> object = MakeShared<Parser::Object>();
+                    object->Put(province->GetId(), data);
+
+                    fmt::println(file, "# {}", province->GetName());
+                    fmt::println(file, "{}", object);
+                }
+
+                fmt::println(file, "\n");
+            }
+        }
+    }
+
+    // Check if there are any provinces that couldn't be saved.
     for(const auto& [id, province] : m_ProvincesByIds) {
         if(!province->HasFlag(ProvinceFlags::LAND) || province->HasFlag(ProvinceFlags::IMPASSABLE))
             continue;
@@ -914,26 +953,7 @@ void Mod::ExportProvincesHistory() {
             LOG_ERROR("Province cannot be saved because missing dejure kingdom tier liege: {}", id);
             continue;
         }
-        if(files.count(kingdomTitle->GetName()) == 0) {
-            std::string filePath = fmt::format("{}/00_{}_prov.txt", dir, kingdomTitle->GetName());
-            files[kingdomTitle->GetName()] = std::ofstream(filePath, std::ios::out);
-        }
-        std::ofstream& file = files[kingdomTitle->GetName()];
-
-        SharedPtr<Parser::Object> data = province->GetOriginalData();
-        if(!province->GetCulture().empty()) data->Put("culture", province->GetCulture());
-        if(!province->GetReligion().empty()) data->Put("religion", province->GetReligion());
-        data->Put("holding", ProvinceHoldingLabels[(int) province->GetHolding()]);
-
-        SharedPtr<Parser::Object> object = MakeShared<Parser::Object>();
-        object->Put(province->GetId(), data);
-
-        fmt::println(file, "# {}", province->GetName());
-        fmt::println(file, "{}", object);
     }
-
-    for(auto& [key, file] : files)
-        file.close();
 }
 
 void Mod::ExportTitles() {
