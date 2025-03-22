@@ -981,8 +981,18 @@ std::string Parser::Format::FormatNumbersList(const Parser::Scalar& key, const S
     );
 }
 
-template std::string Parser::Format::FormatNumbersList<int>(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object, uint depth);
-template std::string Parser::Format::FormatNumbersList<double>(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object, uint depth);
+template std::string Parser::Format::FormatNumbersList<int>(const Scalar& key, const SharedPtr<Object>& object, uint depth);
+template std::string Parser::Format::FormatNumbersList<double>(const Scalar& key, const SharedPtr<Object>& object, uint depth);
+
+std::string Parser::Format::FormatStringsList(const Scalar& key, const SharedPtr<Object>& object, uint depth) {
+    const std::vector<std::string>& strings = std::get<std::vector<std::string>>(object->AsArray());
+    std::string indent = std::string(depth, '\t');
+    return fmt::format("{}", fmt::join(
+        std::views::transform(strings, [indent, key](const auto& string) {
+            return fmt::format("{}{} = {}", indent, key, string);
+        }), "\n")
+    );
+}
 
 template <typename T>
 bool Parser::Format::IsRange(const std::vector<T>& numbers) {
@@ -1011,6 +1021,8 @@ std::string Parser::Format::FormatObject(const SharedPtr<Object>& object, uint d
                     return FormatNumbersList<int>(p.first, p.second.second, depth);
                 if(p.second.second->GetArrayType() == Parser::ObjectType::DECIMAL)
                     return FormatNumbersList<double>(p.first, p.second.second, depth);
+                if(p.second.second->GetArrayType() == Parser::ObjectType::STRING)
+                    return FormatStringsList(p.first, p.second.second, depth);
             }
             return fmt::format(
                 FMT_COMPILE("{}{} {} {}"),
@@ -1290,7 +1302,7 @@ void Parser::Tests() {
     }
     
     // Tests : Formatting
-    // try {
+    try {
         data = Parser::ParseFile(dir + "formatting.txt");
 
         ASSERT("int", "10", fmt::format("{}", data->GetObject("int")));
@@ -1313,13 +1325,13 @@ void Parser::Tests() {
         ASSERT("gt operator", ">", fmt::format("{}", data->GetOperator("op4")));
         ASSERT("ge operator", ">=", fmt::format("{}", data->GetOperator("op5")));
 
-        ASSERT("character", "name = Gaius\nculture = culture:roman\nadd_trait = { greedy brave }\n14.8.19 = {\n\tbirth = yes\n}\nnumbers = { -10 24 24213421 }\nnames = {\n\t{ name = a }\n\t{ name = b }\n}", fmt::format("{}", data->GetObject("character")));
+        ASSERT("character", "name = Gaius\nculture = culture:roman\nadd_trait = greedy\nadd_trait = brave\n14.8.19 = {\n\tbirth = yes\n}\nnumbers = { -10 24 24213421 }\nnames = {\n\t{ name = a }\n\t{ name = b }\n}", fmt::format("{}", data->GetObject("character")));
         ASSERT("depth", "depth2 = {\n\tdepth3a = {\n\t\tdepth4 = { }\n\t}\n\tdepth3b = { }\n}", fmt::format("{}", data->GetObject("depth1")));
-        ASSERT("file", "int = 10\ndecimal = 3.1415\nbool1 = yes\nbool2 = no\nstring = word\nquoted_string = \"Hello World!\"\ndate = 14.8.19\nscoped_string = culture:roman\nint_list = { 10 2 5 }\ndecimal_list = { 1.1 1.3 1.2 }\nbool_list = { yes yes no }\nstring_list = { word1 word2 word3 }\nop1 = 0\nop2 < 0\nop3 <= 0\nop4 > 0\nop5 >= 0\ncharacter = {\n\tname = Gaius\n\tculture = culture:roman\n\tadd_trait = { greedy brave }\n\t14.8.19 = {\n\t\tbirth = yes\n\t}\n\tnumbers = { -10 24 24213421 }\n\tnames = {\n\t\t{ name = a }\n\t\t{ name = b }\n\t}\n}\ndepth1 = {\n\tdepth2 = {\n\t\tdepth3a = {\n\t\t\tdepth4 = { }\n\t\t}\n\t\tdepth3b = { }\n\t}\n}", fmt::format("{}", data));
-    // }
-    // catch(std::exception& e) {
-    //     throw std::runtime_error(fmt::format("Failed to parse 'formatting.txt'\n{}", e.what()));
-    // }
+        ASSERT("file", "int = 10\ndecimal = 3.1415\nbool1 = yes\nbool2 = no\nstring = word\nquoted_string = \"Hello World!\"\ndate = 14.8.19\nscoped_string = culture:roman\nint_list = { 10 2 5 }\ndecimal_list = { 1.1 1.3 1.2 }\nbool_list = { yes yes no }\nstring_list = word1\nstring_list = word2\nstring_list = word3\nop1 = 0\nop2 < 0\nop3 <= 0\nop4 > 0\nop5 >= 0\ncharacter = {\n\tname = Gaius\n\tculture = culture:roman\n\tadd_trait = greedy\n\tadd_trait = brave\n\t14.8.19 = {\n\t\tbirth = yes\n\t}\n\tnumbers = { -10 24 24213421 }\n\tnames = {\n\t\t{ name = a }\n\t\t{ name = b }\n\t}\n}\ndepth1 = {\n\tdepth2 = {\n\t\tdepth3a = {\n\t\t\tdepth4 = { }\n\t\t}\n\t\tdepth3b = { }\n\t}\n}", fmt::format("{}", data));
+    }
+    catch(std::exception& e) {
+        throw std::runtime_error(fmt::format("Failed to parse 'formatting.txt'\n{}", e.what()));
+    }
 
     // Tests : Order
     try {

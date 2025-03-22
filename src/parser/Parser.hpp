@@ -196,7 +196,8 @@ namespace Parser {
 
     namespace Format {
         template <typename T>
-        std::string FormatNumbersList(const Parser::Scalar& key, const SharedPtr<Parser::Object>& object, uint depth);
+        std::string FormatNumbersList(const Scalar& key, const SharedPtr<Object>& object, uint depth);
+        std::string FormatStringsList(const Scalar& key, const SharedPtr<Object>& object, uint depth);
 
         template <typename T>
         bool IsRange(const std::vector<T>& numbers);
