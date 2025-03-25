@@ -78,7 +78,10 @@ void EditorMenu::UpdateHoveringText() {
     if(province == nullptr)
         goto Hide;
 
-    if(m_MapMode == MapMode::PROVINCES || m_MapMode == MapMode::CULTURE || m_MapMode == MapMode::RELIGION) {
+    if(m_MapMode == MapMode::PROVINCES
+    || m_MapMode == MapMode::TERRAIN
+    || m_MapMode == MapMode::CULTURE
+    || m_MapMode == MapMode::RELIGION) {
         m_HoverText.setString(fmt::format("#{} ({})", province->GetId(), province->GetName()));
         m_HoverText.setPosition({(float) mousePosition.x + 5, (float) mousePosition.y - m_HoverText.getGlobalBounds().height - 10});
         m_HoverText.setFillColor(brightenColor(province->GetColor()));
@@ -146,6 +149,9 @@ void EditorMenu::UpdateTexture(MapMode mode, bool resetFocus) {
         case MapMode::RIVERS:
             m_MapTextures[mode].loadFromImage(mod->GetRiversImage());
             break;
+        case MapMode::TERRAIN:
+            m_MapTextures[mode].loadFromImage(mod->GetTerrainImage());
+            break;
         case MapMode::CULTURE:
             m_MapTextures[mode].loadFromImage(mod->GetCultureImage());
             break;
@@ -174,8 +180,7 @@ void EditorMenu::UpdateTexture(MapMode mode, bool resetFocus) {
         }
         default:
             break;
-    }
-    
+    }   
 }
 
 void EditorMenu::UpdateTextures() {
@@ -265,6 +270,7 @@ void EditorMenu::Event(const sf::Event& event) {
         if(d < 5) {
 
             if(m_MapMode == MapMode::PROVINCES
+            || m_MapMode == MapMode::TERRAIN
             || m_MapMode == MapMode::CULTURE
             || m_MapMode == MapMode::RELIGION
             || MapModeIsTitle(m_MapMode)) {
@@ -297,6 +303,7 @@ void EditorMenu::Render() {
     ToggleCamera(true);
 
     if(m_MapMode == MapMode::PROVINCES
+    || m_MapMode == MapMode::TERRAIN
     || m_MapMode == MapMode::CULTURE
     || m_MapMode == MapMode::RELIGION
     || MapModeIsTitle(m_MapMode))
@@ -328,7 +335,7 @@ void EditorMenu::Render() {
 
 void EditorMenu::InitSelectionCallbacks() {
     m_SelectionHandler.AddCallback([&](sf::Mouse::Button button, SharedPtr<Province> province) {
-        if((m_MapMode != MapMode::PROVINCES && m_MapMode != MapMode::CULTURE && m_MapMode != MapMode::RELIGION)
+        if((m_MapMode != MapMode::PROVINCES && m_MapMode != MapMode::TERRAIN && m_MapMode != MapMode::CULTURE && m_MapMode != MapMode::RELIGION)
         || button != sf::Mouse::Button::Left)
             return SelectionCallbackResult::CONTINUE;
 

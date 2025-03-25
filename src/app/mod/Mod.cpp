@@ -27,6 +27,28 @@ sf::Image& Mod::GetRiversImage() {
     return m_RiversImage;
 }
 
+sf::Image Mod::GetTerrainImage() {
+    // - Map provinces colors to their terrain color.
+    // - Copy province image.
+    // - Replace province pixels by their mapped color.
+    sf::Color defaultColor = sf::Color(0, 0, 0);
+
+    sf::Image image = Image::MapPixels(m_ProvinceImage, [&](auto& mappedColors){
+        for(const auto& [provinceColorId, province] : m_Provinces) {
+            std::string terrain = province->GetTerrain();
+            sf::Color color = defaultColor;
+
+            if(m_TerrainTypes.contains(terrain)) {
+                TerrainType terrainType = m_TerrainTypes.at(terrain);
+                color = terrainType.GetColor();
+            }
+
+            mappedColors[province->GetColor().toInteger()] = color.toInteger();
+        }    
+    });
+    return image;
+}
+
 sf::Image Mod::GetCultureImage() {
     // - Map provinces colors to their culture color (province -> county -> county capital -> province).
     // - Copy province image.

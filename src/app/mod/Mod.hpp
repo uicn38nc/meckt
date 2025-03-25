@@ -8,6 +8,7 @@ public:
     sf::Image& GetHeightmapImage();
     sf::Image& GetProvinceImage();
     sf::Image& GetRiversImage();
+    sf::Image GetTerrainImage();
     sf::Image GetCultureImage();
     sf::Image GetReligionImage();
     sf::Image GetTitleImage(TitleType type);
