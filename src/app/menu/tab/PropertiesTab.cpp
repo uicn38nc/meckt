@@ -75,11 +75,11 @@ void PropertiesTab::RenderProvinces() {
             ImGui::EndDisabled();
 
             // PROVINCE: terrain (combobox)
-            if (ImGui::BeginCombo("terrain type", TerrainTypeLabels[(int) province->GetTerrain()])) {
-                for (int i = 0; i < (int) TerrainType::COUNT; i++) {
-                    const bool isSelected = ((int) province->GetTerrain() == i);
-                    if (ImGui::Selectable(TerrainTypeLabels[i], isSelected))
-                        province->SetTerrain((TerrainType) i);
+            if (ImGui::BeginCombo("terrain type", province->GetTerrain().c_str())) {
+                for(const auto& [terrain, _] : m_Menu->GetApp()->GetMod()->GetTerrainTypes()) {
+                    const bool isSelected = (province->GetTerrain() == terrain);
+                    if (ImGui::Selectable(terrain.c_str(), isSelected))
+                        province->SetTerrain(terrain);
 
                     // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                     if (isSelected)
@@ -130,11 +130,11 @@ void PropertiesTab::RenderProvinces() {
             ImGui::InputText("religion", &province->m_Religion);
 
             // PROVINCE: holding type (combobox)
-            if (ImGui::BeginCombo("holding", ProvinceHoldingLabels[(int) province->GetHolding()])) {
-                for (int i = 0; i < (int) ProvinceHolding::COUNT; i++) {
-                    const bool isSelected = ((int) province->GetHolding() == i);
-                    if (ImGui::Selectable(ProvinceHoldingLabels[i], isSelected))
-                        province->SetHolding((ProvinceHolding) i);
+            if (ImGui::BeginCombo("holding", province->GetHolding().c_str())) {
+                for(const auto& [holding, _] : m_Menu->GetApp()->GetMod()->GetHoldingTypes()) {
+                    const bool isSelected = (province->GetHolding() == holding);
+                    if (ImGui::Selectable(holding.c_str(), isSelected))
+                        province->SetHolding(holding);
                     if (isSelected)
                         ImGui::SetItemDefaultFocus();
                 }

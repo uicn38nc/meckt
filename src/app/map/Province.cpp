@@ -1,6 +1,42 @@
 #include "Province.hpp"
 #include "parser/Parser.hpp"
 
+HoldingType::HoldingType() : m_Name("") {}
+
+HoldingType::HoldingType(const std::string& name) : m_Name(name) {}
+
+std::string HoldingType::GetName() const {
+    return m_Name;
+}
+
+void HoldingType::SetName(const std::string& name) {
+    m_Name = name;
+}
+
+TerrainType::TerrainType()
+    : m_Name(""), m_Color(sf::Color::Black)
+{}
+
+TerrainType::TerrainType(const std::string& name, const sf::Color& color)
+    : m_Name(name), m_Color(color)
+{}
+
+std::string TerrainType::GetName() const {
+    return m_Name;
+}
+
+void TerrainType::SetName(const std::string& name) {
+    m_Name = name;
+}
+
+sf::Color TerrainType::GetColor() const {
+    return m_Color;
+}
+
+void TerrainType::SetColor(const sf::Color& color) {
+    m_Color = color;
+}
+
 ProvinceFlags operator|(ProvinceFlags a, ProvinceFlags b) {
     return static_cast<ProvinceFlags>(static_cast<int>(a) | static_cast<int>(b));
 }
@@ -22,21 +58,13 @@ ProvinceFlags& operator&=(ProvinceFlags& a, ProvinceFlags b) {
     return a = a & b;
 }
 
-ProvinceHolding ProvinceHoldingFromString(const std::string& str) {
-    for(int i = 0; i < ProvinceHoldingLabels.size(); i++) {
-        if(String::ToLowercase(ProvinceHoldingLabels[i]) == str)
-            return (ProvinceHolding) i;
-    }
-    return ProvinceHolding::NONE;
-}
-
 Province::Province(int id, sf::Color color, std::string name) {
     m_Id = id;
     m_Color = color;
     m_Name = name;
     m_Flags = ProvinceFlags::NONE;
-    m_Terrain = TerrainType::PLAINS;
-    m_Holding = ProvinceHolding::NONE;
+    m_Holding = "none";
+    m_Terrain = "";
     m_OriginalData = MakeShared<Parser::Object>();
     m_ImagePosition = sf::Vector2i(0, 0);
     m_ImagePixelsCount = 0;
@@ -66,7 +94,11 @@ bool Province::HasFlag(ProvinceFlags flag) const {
     return (bool) (m_Flags & flag);
 }
 
-TerrainType Province::GetTerrain() const {
+std::string Province::GetHolding() const {
+    return m_Holding;
+}
+
+std::string Province::GetTerrain() const {
     return m_Terrain;
 }
 
@@ -76,10 +108,6 @@ std::string Province::GetCulture() const {
 
 std::string Province::GetReligion() const {
     return m_Religion;
-}
-
-ProvinceHolding Province::GetHolding() const {
-    return m_Holding;
 }
 
 void Province::SetName(std::string name) {
@@ -99,7 +127,11 @@ void Province::SetFlag(ProvinceFlags flag, bool enabled) {
     else m_Flags &= (~flag);
 }
 
-void Province::SetTerrain(TerrainType terrain) {
+void Province::SetHolding(std::string holding) {
+    m_Holding = holding;
+}
+
+void Province::SetTerrain(std::string terrain) {
     m_Terrain = terrain;
 }
 
@@ -109,10 +141,6 @@ void Province::SetCulture(std::string culture) {
 
 void Province::SetReligion(std::string religion) {
     m_Religion = religion;
-}
-
-void Province::SetHolding(ProvinceHolding holding) {
-    m_Holding = holding;
 }
 
 std::string Province::GetOriginalFilePath() const {

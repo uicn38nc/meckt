@@ -23,10 +23,15 @@ public:
     std::map<TitleType, std::vector<SharedPtr<Title>>>& GetTitlesByType();
     std::map<int, SharedPtr<BaronyTitle>>& GetBaroniesByProvinceIds();
 
+    const OrderedMap<std::string, HoldingType>& GetHoldingTypes() const;
+    const OrderedMap<std::string, TerrainType>& GetTerrainTypes() const;
+
     void HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color color, float hue, float saturation);
     void GenerateMissingProvinces();
 
     void Load();
+    void LoadHoldingTypes();
+    void LoadTerrainTypes();
     void LoadProvinceImage();
     void LoadDefaultMapFile();
     void LoadProvincesDefinition();
@@ -65,7 +70,10 @@ private:
     std::map<std::string, SharedPtr<Culture>> m_Cultures;
     std::map<std::string, SharedPtr<Religion>> m_Religions;
 
-    TerrainType m_DefaultLandTerrain;
-    TerrainType m_DefaultSeaTerrain;
-    TerrainType m_DefaultCoastalSeaTerrain;
+    OrderedMap<std::string, HoldingType> m_HoldingTypes;
+    OrderedMap<std::string, TerrainType> m_TerrainTypes;
+
+    std::string m_DefaultLandTerrain;
+    std::string m_DefaultSeaTerrain;
+    std::string m_DefaultCoastalSeaTerrain;
 };

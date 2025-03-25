@@ -1,5 +1,33 @@
 #pragma once
 
+class HoldingType {
+public:
+    HoldingType();
+    HoldingType(const std::string& name);
+
+    std::string GetName() const;
+    void SetName(const std::string& name);
+
+private:
+    std::string m_Name;
+};
+
+class TerrainType {
+public:
+    TerrainType();
+    TerrainType(const std::string& name, const sf::Color& color);
+
+    std::string GetName() const;
+    void SetName(const std::string& name);
+    
+    sf::Color GetColor() const;
+    void SetColor(const sf::Color& color);
+
+private:
+    std::string m_Name;
+    sf::Color m_Color;
+};
+
 enum class ProvinceFlags {
     NONE       = 0,
     COASTAL    = 1 << 0,
@@ -17,25 +45,6 @@ ProvinceFlags operator~(ProvinceFlags a);
 ProvinceFlags& operator|=(ProvinceFlags& a, ProvinceFlags b);
 ProvinceFlags& operator&=(ProvinceFlags& a, ProvinceFlags b);
 
-enum class ProvinceHolding {
-    NONE,
-    TRIBAL,
-    CASTLE,
-    CITY,
-    CHURCH,
-    COUNT,
-};
-
-const std::vector<const char*> ProvinceHoldingLabels = {
-    "none",
-    "tribal_holding",
-    "castle_holding",
-    "city_holding",
-    "church_holding",
-};
-
-ProvinceHolding ProvinceHoldingFromString(const std::string& str);
-
 class Province {
 friend PropertiesTab;
 public:
@@ -47,19 +56,19 @@ public:
     std::string GetName() const;
     ProvinceFlags GetFlags() const;
     bool HasFlag(ProvinceFlags flag) const;
-    TerrainType GetTerrain() const;
+    std::string GetHolding() const;
+    std::string GetTerrain() const;
     std::string GetCulture() const;
     std::string GetReligion() const;
-    ProvinceHolding GetHolding() const;
 
     void SetName(std::string name);
     void SetColor(sf::Color color);
     void SetFlags(ProvinceFlags flags);
     void SetFlag(ProvinceFlags flag, bool enabled);
-    void SetTerrain(TerrainType terrain);
+    void SetHolding(std::string holding);
+    void SetTerrain(std::string terrain);
     void SetCulture(std::string culture);
     void SetReligion(std::string religion);
-    void SetHolding(ProvinceHolding holding);
     
     std::string GetOriginalFilePath() const;
     SharedPtr<Parser::Object> GetOriginalData() const;
@@ -77,11 +86,12 @@ private:
     std::string m_Name;
     sf::Color m_Color;
     ProvinceFlags m_Flags;
-    TerrainType m_Terrain;
 
+    std::string m_Holding;
+    std::string m_Terrain;
+    
     std::string m_Culture;
     std::string m_Religion;
-    ProvinceHolding m_Holding;
 
     std::string m_OriginalFilePath;
     SharedPtr<Parser::Object> m_OriginalData;

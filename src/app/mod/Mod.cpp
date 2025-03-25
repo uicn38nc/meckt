@@ -207,6 +207,14 @@ std::map<int, SharedPtr<BaronyTitle>>& Mod::GetBaroniesByProvinceIds() {
     return m_BaroniesByProvinceIds;
 }
 
+const OrderedMap<std::string, HoldingType>& Mod::GetHoldingTypes() const {
+    return m_HoldingTypes;
+}
+
+const OrderedMap<std::string, TerrainType>& Mod::GetTerrainTypes() const {
+    return m_TerrainTypes;
+}
+
 void Mod::HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color rgb, float hue, float saturation) {
     // Generate a list of colors with uniformly spaced saturations around
     // the saturation of the original color while picking a random hue.
@@ -298,6 +306,8 @@ void Mod::Load() {
         LOG_ERROR("Failed to load rivers image at ", m_Dir + "/map_data/rivers.png");
     }
 
+    this->LoadHoldingTypes();
+    this->LoadTerrainTypes();
     this->LoadProvincesDefinition();
     this->LoadProvinceImage();
     this->LoadDefaultMapFile();
@@ -307,6 +317,104 @@ void Mod::Load() {
     this->LoadTitlesHistory();
     this->LoadCultures();
     this->LoadReligions();
+}
+
+void Mod::LoadHoldingTypes() {
+    std::set<std::string> filesPath = File::ListFiles(m_Dir + "/common/holdings/");
+
+    // Manually define this type as it's not really type.
+    m_HoldingTypes = OrderedMap<std::string, HoldingType>();
+    m_HoldingTypes.insert("none", HoldingType("none"));
+
+    for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".txt"))
+            continue;
+        try {
+            SharedPtr<Parser::Object> data = Parser::ParseFile(filePath);
+
+            for(auto& [k, pair] : data->GetEntries()) {
+                if(!std::holds_alternative<std::string>(k))
+                    continue;
+                std::string key = std::get<std::string>(k);
+                m_HoldingTypes.insert(key, HoldingType(key));
+            }
+        }
+        catch(const std::runtime_error& e) {
+            LOG_ERROR("Failed to parse file {} : {}", filePath, e.what());
+        }
+    }
+
+    // If no holding types are defined, vanilla holdings are used as default.
+    if(m_HoldingTypes.empty()) {
+        auto vanillaTypes = {
+            HoldingType("tribal_holding"),
+            HoldingType("castle_holding"),
+            HoldingType("city_holding"),
+            HoldingType("church_holding"),
+        };
+
+        for(auto type : vanillaTypes) {
+            m_HoldingTypes.insert(type.GetName(), type);
+        }
+        LOG_INFO("Loaded vanilla holding types as no user-defined types have been found");
+        return;
+    }
+
+    LOG_INFO("Loaded {} holding types from {} files", m_HoldingTypes.size(), filesPath.size());
+}
+
+void Mod::LoadTerrainTypes() {
+    std::set<std::string> filesPath = File::ListFiles(m_Dir + "/common/terrain_types/");
+
+    m_TerrainTypes = OrderedMap<std::string, TerrainType>();
+
+    for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".txt"))
+            continue;
+        try {
+            SharedPtr<Parser::Object> data = Parser::ParseFile(filePath);
+
+            for(auto& [k, pair] : data->GetEntries()) {
+                if(!std::holds_alternative<std::string>(k))
+                    continue;
+                std::string key = std::get<std::string>(k);
+                auto [op, value] = pair;
+                sf::Color color = value->Get<sf::Color>("color", sf::Color::Black);
+                m_TerrainTypes.insert(key, TerrainType(key, color));
+            }
+        }
+        catch(const std::runtime_error& e) {
+            LOG_ERROR("Failed to parse file {} : {}", filePath, e.what());
+        }
+    }
+
+    // If no terrain types are defined, vanilla terrains are used as default.
+    if(m_TerrainTypes.empty()) {
+        auto vanillaTypes = {
+            TerrainType("plains", sf::Color(204, 163, 102)),
+            TerrainType("farmlands", sf::Color(255, 50, 50)),
+            TerrainType("hills", sf::Color(200, 200, 200)),
+            TerrainType("mountains", sf::Color(255, 255, 255)),
+            TerrainType("desert", sf::Color(255, 255, 0)),
+            TerrainType("desert Mountains", sf::Color(100, 100, 0)),
+            TerrainType("oasis", sf::Color(100, 100, 255)),
+            TerrainType("jungle", sf::Color(100, 0, 0)),
+            TerrainType("forest", sf::Color(255, 0, 0)),
+            TerrainType("wetlands", sf::Color(100, 20, 20)),
+            TerrainType("steppe", sf::Color(200, 100, 200)),
+            TerrainType("floodplains", sf::Color(50, 50, 255)),
+            TerrainType("drylands", sf::Color(200, 200, 0)),
+            TerrainType("sea", sf::Color(0, 0, 255))
+        };
+
+        for(auto type : vanillaTypes) {
+            m_TerrainTypes.insert(type.GetName(), type);
+        }
+        LOG_INFO("Loaded vanilla terrain types as no user-defined types have been found");
+        return;
+    }
+    
+    LOG_INFO("Loaded {} terrain types from {} files", m_TerrainTypes.size(), filesPath.size());
 }
 
 void Mod::LoadDefaultMapFile() {
@@ -464,16 +572,15 @@ void Mod::LoadProvincesDefinition() {
 void Mod::LoadProvincesTerrain() {
     SharedPtr<Parser::Object> result = Parser::ParseFile(m_Dir + "/common/province_terrain/00_province_terrain.txt");
 
-    m_DefaultLandTerrain = TerrainTypefromString(result->Get("default_land", std::string("plains")));
-    m_DefaultSeaTerrain = TerrainTypefromString(result->Get("default_sea", std::string("sea")));
-    m_DefaultCoastalSeaTerrain = TerrainTypefromString(result->Get("default_coastal_sea", std::string("sea")));
+    m_DefaultLandTerrain = result->Get("default_land", std::string("plains"));
+    m_DefaultSeaTerrain = result->Get("default_sea", std::string("sea"));
+    m_DefaultCoastalSeaTerrain = result->Get("default_coastal_sea", std::string("sea"));
 
+    // Set default terrain for all provinces (especially for those without any in files).
     for(const auto& [colorId, province] : m_Provinces) {
-        TerrainType defaultTerrain = m_DefaultLandTerrain;
-
+        std::string defaultTerrain = m_DefaultLandTerrain;
         if(province->HasFlag(ProvinceFlags::SEA))
             defaultTerrain = (province->HasFlag(ProvinceFlags::COASTAL) ? m_DefaultCoastalSeaTerrain : m_DefaultSeaTerrain);
-
         province->SetTerrain(defaultTerrain);
     }
 
@@ -482,21 +589,26 @@ void Mod::LoadProvincesTerrain() {
             continue;
         const auto& [op, value] = pair;
         int provinceId = std::get<double>(key);
-        TerrainType terrain = TerrainType::PLAINS;
+        std::string terrain = "";
 
         // If the province id has been assigned several terrain type
         // then we only pick the first one, and send a warning to the user.
         if(!value->Is(Parser::ObjectType::STRING)) {
             std::vector<std::string> values = (*value);
-            terrain = TerrainTypefromString(values[0]);
+            terrain = values[0];
             LOG_WARNING("Province assigned several terrain types: {}", provinceId);
         }
         else {
-            terrain = TerrainTypefromString(*value);
+            terrain = (std::string) (*value);
         }
 
         if(m_ProvincesByIds.count(provinceId) == 0) {
             LOG_WARNING("Terrain type assigned to undefined province: {}", provinceId);
+            continue;
+        }
+
+        if(!m_TerrainTypes.contains(terrain)) {
+            LOG_WARNING("Undefined terrain type '{}' assigned to province {}", terrain, provinceId);
             continue;
         }
 
@@ -526,7 +638,12 @@ void Mod::LoadProvincesHistory() {
             if(value->ContainsKey("religion"))
                 m_ProvincesByIds[provinceId]->SetReligion(value->Get<std::string>("religion"));
             if(value->ContainsKey("holding"))
-                m_ProvincesByIds[provinceId]->SetHolding(ProvinceHoldingFromString(value->Get<std::string>("holding")));
+                m_ProvincesByIds[provinceId]->SetHolding(value->Get<std::string>("holding"));
+
+            if(!m_HoldingTypes.contains(m_ProvincesByIds[provinceId]->GetHolding())) {
+                LOG_WARNING("Undefined holding type '{}' assigned to province {}", m_ProvincesByIds[provinceId]->GetHolding(), provinceId);
+                continue;
+            }
 
             // Remove those attributes to avoid duplicates when exporting
             // and to reduce memory usage a bit.
@@ -869,13 +986,9 @@ void Mod::ExportProvincesDefinition() {
 void Mod::ExportProvincesTerrain() {
     std::ofstream file(m_Dir + "/common/province_terrain/00_province_terrain.txt", std::ios::out);
 
-    auto TerrainToString = [=](TerrainType terrain) {
-        return String::ToLowercase(TerrainTypeLabels[(int) terrain]);
-    };
-
-    fmt::println(file, "default_land={}", TerrainToString(m_DefaultLandTerrain));
-    fmt::println(file, "default_sea={}", TerrainToString(m_DefaultSeaTerrain));
-    fmt::println(file, "default_coastal_sea={}", TerrainToString(m_DefaultCoastalSeaTerrain));
+    fmt::println(file, "default_land={}", m_DefaultLandTerrain);
+    fmt::println(file, "default_sea={}", m_DefaultSeaTerrain);
+    fmt::println(file, "default_coastal_sea={}", m_DefaultCoastalSeaTerrain);
     fmt::println(file, "\n");
 
     for(auto& [id, province] : m_ProvincesByIds) {
@@ -884,7 +997,7 @@ void Mod::ExportProvincesTerrain() {
         fmt::println(file,
             "{}={}",
             province->GetId(),
-            TerrainToString(province->GetTerrain())
+            province->GetTerrain()
         );
     }
 
@@ -930,7 +1043,7 @@ void Mod::ExportProvincesHistory() {
                     SharedPtr<Parser::Object> data = province->GetOriginalData();
                     if(!province->GetCulture().empty()) data->Put("culture", province->GetCulture());
                     if(!province->GetReligion().empty()) data->Put("religion", province->GetReligion());
-                    data->Put("holding", ProvinceHoldingLabels[(int) province->GetHolding()]);
+                    data->Put("holding", province->GetHolding().empty() ? "none" : province->GetHolding());
 
                     SharedPtr<Parser::Object> object = MakeShared<Parser::Object>();
                     object->Put(province->GetId(), data);
@@ -1060,7 +1173,7 @@ void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int de
             SharedPtr<BaronyTitle> vassalTitle = CastSharedPtr<BaronyTitle>(highTitle->GetDejureTitles().front());
             if(m_ProvincesByIds.count(vassalTitle->GetProvinceId()) > 0) {
                 SharedPtr<Province> province = m_ProvincesByIds[vassalTitle->GetProvinceId()];
-                if(province->GetHolding() == ProvinceHolding::NONE) {
+                if(province->GetHolding() == "none") {
                     LOG_ERROR("Capital barony {} of county {} does not have any holding", vassalTitle->GetName(), title->GetName());
                 }
             }

@@ -23,23 +23,6 @@ typedef unsigned int uint;
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
-#include "util/Ptr.hpp"
-#include "util/Logger.hpp"
-#include "util/String.hpp"
-#include "util/Math.hpp"
-#include "util/File.hpp"
-#include "util/Color.hpp"
-#include "util/Date.hpp"
-#include "util/ScopedString.hpp"
-#include "util/Image.hpp"
-#include "util/OrderedMap.hpp"
-#include "app/Configuration.hpp"
-
-#include "app/map/TitleType.hpp"
-#include "app/map/MapMode.hpp"
-#include "app/map/TerrainType.hpp"
-#include "app/menu/selection/SelectionCallbackResult.hpp"
-
 // Custom backward::SignalHandling to print stacktrace to file.
 class SignalHandler;
 
@@ -57,7 +40,6 @@ namespace Parser {
 class Mod;
 class Culture;
 class Religion;
-class Province;
 class Title;
 class HighTitle;
 class BaronyTitle;
@@ -74,4 +56,20 @@ class Tab;
 class TitlesTab;
 class PropertiesTab;
 
+#include "util/Ptr.hpp"
+#include "util/Logger.hpp"
+#include "util/String.hpp"
+#include "util/Math.hpp"
+#include "util/File.hpp"
+#include "util/Color.hpp"
+#include "util/Date.hpp"
+#include "util/ScopedString.hpp"
+#include "util/Image.hpp"
+#include "util/OrderedMap.hpp"
+#include "app/Configuration.hpp"
+
+#include "app/map/TitleType.hpp"
+#include "app/map/MapMode.hpp"
+#include "app/map/Province.hpp"
+#include "app/menu/selection/SelectionCallbackResult.hpp"
 #include "app/menu/tab/Tab.hpp"

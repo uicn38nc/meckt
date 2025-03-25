@@ -581,7 +581,7 @@ void EditorMenu::RenderModals() {
         }
 
         if (ImGui::BeginCombo("type", TitleTypeLabels[(int) type])) {
-            for(int i = 0; i < (int) ProvinceHolding::COUNT; i++) {
+            for(int i = 0; i < (int) TitleType::COUNT; i++) {
                 const bool isSelected = ((TitleType) i == type);
                 if (ImGui::Selectable(TitleTypeLabels[i], isSelected)) {
                     type = (TitleType) i;
