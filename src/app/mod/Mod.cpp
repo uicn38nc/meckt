@@ -884,17 +884,14 @@ void Mod::ExportDefaultMapFile() {
     // Read the file and keep all values except for the terrain flags
     // such as: sea_zones, impassable_seas, lakes, impassable_mountains, river_provinces
     SharedPtr<Parser::Object> data = Parser::ParseFile(m_Dir + "/map_data/default.map");
-    SharedPtr<Parser::Object> seaZonesData = MakeShared<Parser::Object>();
-    SharedPtr<Parser::Object> riverProvincesData = MakeShared<Parser::Object>();
-    SharedPtr<Parser::Object> lakesData = MakeShared<Parser::Object>();
-    SharedPtr<Parser::Object> impassableMountainsData = MakeShared<Parser::Object>();
-    SharedPtr<Parser::Object> impassableSeasData = MakeShared<Parser::Object>();
 
-    seaZonesData->Put("sea_zones", std::vector<double>());
-    impassableSeasData->Put("impassable_seas", std::vector<double>());
-    riverProvincesData->Put("river_provinces", std::vector<double>());
-    lakesData->Put("lakes", std::vector<double>());
-    impassableMountainsData->Put("impassable_mountains", std::vector<double>());
+    SharedPtr<Parser::Object> zonesData = MakeShared<Parser::Object>();
+
+    zonesData->Put("sea_zones", std::vector<double>());
+    zonesData->Put("impassable_seas", std::vector<double>());
+    zonesData->Put("river_provinces", std::vector<double>());
+    zonesData->Put("lakes", std::vector<double>());
+    zonesData->Put("impassable_mountains", std::vector<double>());
 
     // Remove those keys since they are printed seperately.
     data->Remove("sea_zones");
@@ -905,19 +902,19 @@ void Mod::ExportDefaultMapFile() {
 
     for(const auto& [id, province] : m_ProvincesByIds) {
         if(province->HasFlag(ProvinceFlags::SEA)) {
-            seaZonesData->GetObject("sea_zones")->Push((double) id);
+            zonesData->GetObject("sea_zones")->Push((double) id);
             if(province->HasFlag(ProvinceFlags::IMPASSABLE))
-                impassableSeasData->GetObject("impassable_seas")->Push((double) id);
+                zonesData->GetObject("impassable_seas")->Push((double) id);
         }
         else if(province->HasFlag(ProvinceFlags::IMPASSABLE)) {
-            impassableMountainsData->GetObject("impassable_mountains")->Push((double) id);
+            zonesData->GetObject("impassable_mountains")->Push((double) id);
         }
 
         if(province->HasFlag(ProvinceFlags::LAKE))
-            lakesData->GetObject("lakes")->Push((double) id);
+            zonesData->GetObject("lakes")->Push((double) id);
             
         if(province->HasFlag(ProvinceFlags::RIVER))
-            riverProvincesData->GetObject("river_provinces")->Push((double) id);
+            zonesData->GetObject("river_provinces")->Push((double) id);
     }
 
     // TODO: add error log if file can't be opened.
@@ -925,6 +922,7 @@ void Mod::ExportDefaultMapFile() {
     std::ofstream file(m_Dir + "/map_data/default.map", std::ios::out);
 
     #define PRINT_DATA(key) fmt::println(file, "{} = {}", key, data->GetObject(key)); data->Remove(key)
+    #define FORMAT_LIST(key) Parser::Format::FormatNumbersList<double>(key, zonesData->GetObject(key), 0)
 
     PRINT_DATA("definitions");
     PRINT_DATA("provinces");
@@ -940,11 +938,11 @@ void Mod::ExportDefaultMapFile() {
         file, 
         "\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}",
         data,
-        seaZonesData,
-        impassableSeasData,
-        riverProvincesData,
-        lakesData,
-        impassableMountainsData
+        FORMAT_LIST("sea_zones"),
+        FORMAT_LIST("impassable_seas"),
+        FORMAT_LIST("river_provinces"),
+        FORMAT_LIST("lakes"),
+        FORMAT_LIST("impassable_mountains")
     );
 
     file.close();

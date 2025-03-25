@@ -955,7 +955,7 @@ std::string Parser::Format::FormatNumbersList(const Parser::Scalar& key, const S
         // Push a new line if a streak is broken or if it is the last element of the vector.
         if(current == l.size() || l[current-1]+1 != l[current]) {
             if(n > 3) {
-                lines.push_back(fmt::format("RANGE {{ {}  {} }}", l[start], l[current-1]));
+                lines.push_back(fmt::format("RANGE {{ {} {} }}", l[start], l[current-1]));
             }
             else {
                 for(int i = start; i < current; i++)
@@ -967,7 +967,7 @@ std::string Parser::Format::FormatNumbersList(const Parser::Scalar& key, const S
     }
 
     if(!loneNumbers.empty()) {
-        lines.push_back(fmt::format("{}{{ {} }}", (lines.empty() ? "" : "LIST "), fmt::join(
+        lines.push_back(fmt::format("LIST {{ {} }}", fmt::join(
             std::views::transform(loneNumbers, [](const auto& v) {
                 return fmt::format("{}", v);
             }), " ")
@@ -1017,10 +1017,10 @@ std::string Parser::Format::FormatObject(const SharedPtr<Object>& object, uint d
         // Format recursively objects in the current object.
         auto v = std::views::transform(object->GetEntries(), [depth](const auto& p) {
             if(p.second.second->Is(Parser::ObjectType::ARRAY)) {
-                if(p.second.second->GetArrayType() == Parser::ObjectType::INT)
-                    return FormatNumbersList<int>(p.first, p.second.second, depth);
-                if(p.second.second->GetArrayType() == Parser::ObjectType::DECIMAL)
-                    return FormatNumbersList<double>(p.first, p.second.second, depth);
+                // if(p.second.second->GetArrayType() == Parser::ObjectType::INT)
+                //     return FormatNumbersList<int>(p.first, p.second.second, depth);
+                // if(p.second.second->GetArrayType() == Parser::ObjectType::DECIMAL)
+                //     return FormatNumbersList<double>(p.first, p.second.second, depth);
                 if(p.second.second->GetArrayType() == Parser::ObjectType::STRING)
                     return FormatStringsList(p.first, p.second.second, depth);
             }
@@ -1295,7 +1295,7 @@ void Parser::Tests() {
         ASSERT("transform to range", "RANGE { 1 5 }", fmt::format("{}", data->GetObject("l1")));
         ASSERT("concatenate list", "[1, 2, 3, 4, 5, 6, 7, 8]", SerializeList(data->GetArray<double>("l2", {})));
         ASSERT("transform to range", "RANGE { 1 8 }", fmt::format("{}", data->GetObject("l2")));
-        ASSERT("range list", "l3 = RANGE { 5  11 }", fmt::format("{}", data->GetObject("l3")));
+        ASSERT("range list", "l3 = RANGE { 5 11 }", fmt::format("{}", data->GetObject("l3")));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'ranges.txt'\n{}", e.what()));
