@@ -525,6 +525,10 @@ void EditorMenu::RenderMenuBarTools() {
         if(ImGui::MenuItem("Generate missing provinces")) {
             m_ModalName = "Generate missing provinces";
         }
+        
+        if(ImGui::MenuItem("Generate missing baronies")) {
+            m_ModalName = "Generate missing baronies";
+        }
 
         ImGui::EndMenu();
     }
@@ -736,6 +740,26 @@ void EditorMenu::RenderModals() {
         ImGui::EndPopup();
     }
     // GENERATE PROVINCES: modal end
+    
+    // GENERATE BARONIES: modal begin
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if(ImGui::BeginPopupModal("Generate missing baronies", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "This action cannot be undone!");
+        ImGui::Separator();
+
+        if(ImGui::Button("Generate", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+            m_App->GetMod()->GenerateMissingBaronies();
+        }
+
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    // GENERATE BARONIES: modal end
     
     // EXPORT : modal begin
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));

@@ -349,6 +349,33 @@ void Mod::GenerateMissingProvinces() {
     }
 }
 
+void Mod::GenerateMissingBaronies() {
+    for(auto& [id, province] : m_ProvincesByIds) {
+        if(!province->HasFlag(ProvinceFlags::LAND))
+            continue;
+        if(province->HasFlag(ProvinceFlags::IMPASSABLE))
+            continue;
+        if(m_BaroniesByProvinceIds.count(id) > 0)
+            continue;
+        
+        // Make sure to use a title name that isn't already taken.
+        std::string baronyName = "b_" + String::ToLowercase(province->GetName());
+        int i = 1;
+        while(m_Titles.count(baronyName) > 0) {
+            baronyName = "b_" + String::ToLowercase(province->GetName()) + std::to_string(i);
+            i++;
+        }
+
+        // Create a new barony title for that land province.
+        SharedPtr<Title> title = MakeTitle(TitleType::BARONY, baronyName, province->GetColor(), false);
+        SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
+        baronyTitle->SetProvinceId(province->GetId());
+
+        // Add the barony title.
+        this->AddTitle(title);
+    }
+}
+
 void Mod::Load() {
     if(!this->HasMap())
         return;

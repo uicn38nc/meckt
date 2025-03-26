@@ -32,6 +32,7 @@ public:
 
     void HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color color, float hue, float saturation);
     void GenerateMissingProvinces();
+    void GenerateMissingBaronies();
 
     void Load();
     void LoadHoldingTypes();

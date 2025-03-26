@@ -150,9 +150,17 @@ void PropertiesTab::RenderProvinces() {
                 }
             }
             // PROVINCE: create barony (button)
-            else {
+            else if(province->HasFlag(ProvinceFlags::LAND) && !province->HasFlag(ProvinceFlags::IMPASSABLE)) {
                 if(ImGui::Button("create barony title")) {
-                    SharedPtr<Title> title = MakeTitle(TitleType::BARONY, province->GetName(), province->GetColor(), false);
+                    // Make sure to use a title name that isn't already taken.
+                    std::string baronyName = "b_" + String::ToLowercase(province->GetName());
+                    int i = 1;
+                    while(m_Menu->GetApp()->GetMod()->GetTitles().count(baronyName) > 0) {
+                        baronyName = "b_" + String::ToLowercase(province->GetName()) + std::to_string(i);
+                        i++;
+                    }
+
+                    SharedPtr<Title> title = MakeTitle(TitleType::BARONY, baronyName, province->GetColor(), false);
                     SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
                     baronyTitle->SetProvinceId(province->GetId());
 
