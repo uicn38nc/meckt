@@ -297,7 +297,9 @@ void Mod::HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf:
 
     // Shuffle the colors not to have a gradient but random
     // distribution which may make it easier to discern titles.
-    std::random_shuffle(colors.begin(), colors.end());
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(colors.begin(), colors.end(), g);
 
     // Apply those colors to the titles.
     for(int i = 0; i < titles.size(); i++) {
