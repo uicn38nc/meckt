@@ -623,8 +623,6 @@ void EditorMenu::RenderModals() {
 
             // Create a new title using the attributes.
             SharedPtr<Title> title = MakeTitle(type, name, color, landless);
-            mod->GetTitles()[name] = title;
-            mod->GetTitlesByType()[type].push_back(title);
 
             if(type != TitleType::BARONY) {
                 // If the title is at least a county, then add every selected titles of the
@@ -650,12 +648,11 @@ void EditorMenu::RenderModals() {
                 // If no province is currently selected, the default province id for the barony will be 0.
                 int provinceId = (hasSelectedProvince) ? m_SelectionHandler.GetProvinces()[0]->GetId() : 0;
                 const SharedPtr<BaronyTitle>& barony = CastSharedPtr<BaronyTitle>(title);
-
                 barony->SetProvinceId(provinceId);
-                mod->GetBaroniesByProvinceIds()[barony->GetProvinceId()] = barony;
-
-                mod->GetProvincesByIds()[provinceId]->SetName(name);
             }
+
+            mod->AddTitle(title);
+
             this->SwitchMapMode(TitleTypeToMapMode(type), true);
             this->RefreshMapMode();
             m_SelectionHandler.Select(title);

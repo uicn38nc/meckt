@@ -237,6 +237,41 @@ const OrderedMap<std::string, TerrainType>& Mod::GetTerrainTypes() const {
     return m_TerrainTypes;
 }
 
+void Mod::AddTitle(SharedPtr<Title> title) {
+    // Add title to global titles map.
+    m_Titles[title->GetName()] = title;
+
+    // Remove any titles with the same name from the lists before adding it.
+    m_TitlesByType[title->GetType()].erase(
+        std::remove_if(m_TitlesByType[title->GetType()].begin(), m_TitlesByType[title->GetType()].end(), [title](SharedPtr<Title> t) {
+            return t->GetName() == title->GetName();
+    }), m_TitlesByType[title->GetType()].end());
+    m_TitlesByType[title->GetType()].push_back(title);
+
+    // Add barony title to province-barony map.
+    if(title->Is(TitleType::BARONY)) {
+        const SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
+        m_BaroniesByProvinceIds[baronyTitle->GetProvinceId()] = baronyTitle;
+    }
+}
+
+void Mod::RemoveTitle(SharedPtr<Title> title) {
+    // Remove title from global titles map.
+    m_Titles.erase(title->GetName());
+
+    // Remove any titles with the same name from the lists.
+    m_TitlesByType[title->GetType()].erase(
+        std::remove_if(m_TitlesByType[title->GetType()].begin(), m_TitlesByType[title->GetType()].end(), [title](SharedPtr<Title> t) {
+            return t->GetName() == title->GetName();
+    }), m_TitlesByType[title->GetType()].end());
+
+    // Add barony title to province-barony map.
+    if(title->Is(TitleType::BARONY)) {
+        const SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
+        m_BaroniesByProvinceIds.erase(baronyTitle->GetProvinceId());
+    }
+}
+
 void Mod::HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color rgb, float hue, float saturation) {
     // Generate a list of colors with uniformly spaced saturations around
     // the saturation of the original color while picking a random hue.

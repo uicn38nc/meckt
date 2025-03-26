@@ -454,10 +454,7 @@ void PropertiesTab::RenderTitles() {
                     }
 
                     const SharedPtr<Mod>& mod = m_Menu->GetApp()->GetMod();
-                    auto& l = mod->GetTitlesByType()[title->GetType()];
-
-                    mod->GetTitles().erase(title->GetName());
-                    l.erase(std::remove(l.begin(), l.end(), title));
+                    mod->RemoveTitle(title);
 
                     m_Menu->RefreshMapMode(true);
                 }

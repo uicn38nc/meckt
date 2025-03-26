@@ -27,6 +27,9 @@ public:
     const OrderedMap<std::string, HoldingType>& GetHoldingTypes() const;
     const OrderedMap<std::string, TerrainType>& GetTerrainTypes() const;
 
+    void AddTitle(SharedPtr<Title> title);
+    void RemoveTitle(SharedPtr<Title> title);
+
     void HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color color, float hue, float saturation);
     void GenerateMissingProvinces();
 
