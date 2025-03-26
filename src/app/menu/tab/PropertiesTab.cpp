@@ -149,6 +149,16 @@ void PropertiesTab::RenderProvinces() {
                     m_Menu->GetSelectionHandler().Select(title);
                 }
             }
+            // PROVINCE: create barony (button)
+            else {
+                if(ImGui::Button("create barony title")) {
+                    SharedPtr<Title> title = MakeTitle(TitleType::BARONY, province->GetName(), province->GetColor(), false);
+                    SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
+                    baronyTitle->SetProvinceId(province->GetId());
+
+                    m_Menu->GetApp()->GetMod()->AddTitle(title);
+                }
+            }
 
             ImGui::PopID();
         }
