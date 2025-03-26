@@ -311,6 +311,7 @@ void Mod::GenerateMissingProvinces() {
     // Loop through the province image and generate provinces for any color
     // that does not already have one.
 
+    int count = 0;
     int nextId = 1;
 
     uint width = m_ProvinceImage.getSize().x;
@@ -344,14 +345,17 @@ void Mod::GenerateMissingProvinces() {
                 SharedPtr<Province> province = MakeShared<Province>(nextId, sf::Color(provinceColor), fmt::format("province_{}", nextId));
                 m_Provinces[province->GetColorId()] = province;
                 m_ProvincesByIds[province->GetId()] = province;
+                count++;
                 nextId++;
             }
         }
         previousProvinceColor = provinceColor;
     }
+    LOG_INFO("Generated {} new provinces based on the province image", count);
 }
 
 void Mod::GenerateMissingBaronies() {
+    int count = 0;
     for(auto& [id, province] : m_ProvincesByIds) {
         if(!province->HasFlag(ProvinceFlags::LAND))
             continue;
@@ -375,7 +379,9 @@ void Mod::GenerateMissingBaronies() {
 
         // Add the barony title.
         this->AddTitle(title);
+        count++;
     }
+    LOG_INFO("Generated {} new barony titles for passable land provinces without any", count);
 }
 
 void Mod::Load() {
