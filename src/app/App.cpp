@@ -64,6 +64,7 @@ void App::Init() {
     this->DebugSettings();
 #elif _WIN32
     ShowWindow(GetConsoleWindow(), SW_HIDE);
+    ShowWindow(m_Window.getSystemHandle(), SW_MAXIMIZE);
 #endif
 }
 
