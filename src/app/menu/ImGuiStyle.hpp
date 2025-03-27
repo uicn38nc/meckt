@@ -7,4 +7,5 @@ namespace ImGui {
     void SetupStyle();
 
     bool ColorEdit3(const char* label, sf::Color* color, ImGuiColorEditFlags flags = 0);
+    bool CheckBoxTristate(const char* label, int* v_tristate);
 }

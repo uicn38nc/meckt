@@ -41,6 +41,9 @@ void PropertiesTab::Render() {
         m_Menu->GetApp()->GetWindow().draw(m_SelectingTitleText);
 
     if(m_Menu->GetSelectionHandler().GetProvinces().size() > 0) {
+        if(m_Menu->GetSelectionHandler().GetProvinces().size() > 1) {
+            this->RenderJointProvinces();
+        }
         this->RenderProvinces();
     }
     else if(m_Menu->GetSelectionHandler().GetTitles().size() > 0) {
@@ -49,10 +52,136 @@ void PropertiesTab::Render() {
     
 }
 
+void PropertiesTab::RenderJointProvinces() {
+    // Determine values based on selected provinces and
+    // whether several provinces have different values for a property.
+    const SharedPtr<Province>& firstProvince = m_Menu->GetSelectionHandler().GetProvinces().front();
+
+    std::string culture = firstProvince->GetCulture();
+    std::string religion = firstProvince->GetReligion();
+    std::string holding = firstProvince->GetHolding();
+    std::string terrain = firstProvince->GetTerrain();
+
+    int isCoastal = firstProvince->HasFlag(ProvinceFlags::COASTAL);
+    int isLake = firstProvince->HasFlag(ProvinceFlags::LAKE);
+    int isIsland = firstProvince->HasFlag(ProvinceFlags::ISLAND);
+    int isLand = firstProvince->HasFlag(ProvinceFlags::LAND);
+    int isSea = firstProvince->HasFlag(ProvinceFlags::SEA);
+    int isRiver = firstProvince->HasFlag(ProvinceFlags::RIVER);
+    int isImpassable = firstProvince->HasFlag(ProvinceFlags::IMPASSABLE);
+
+    for (auto& province : m_Menu->GetSelectionHandler().GetProvinces()) {
+        if (province->GetCulture() != culture) culture = "*****";
+        if (province->GetReligion() != religion) religion = "*****";
+        if (province->GetHolding() != holding) holding = "*****";
+        if (province->GetTerrain() != terrain) terrain = "*****";
+        if (province->HasFlag(ProvinceFlags::COASTAL) != isCoastal) isCoastal = -1;
+        if (province->HasFlag(ProvinceFlags::LAKE) != isLake) isLake = -1;
+        if (province->HasFlag(ProvinceFlags::ISLAND) != isIsland) isIsland = -1;
+        if (province->HasFlag(ProvinceFlags::LAND) != isLand) isLand = -1;
+        if (province->HasFlag(ProvinceFlags::SEA) != isSea) isSea = -1;
+        if (province->HasFlag(ProvinceFlags::RIVER) != isRiver) isRiver = -1;
+        if (province->HasFlag(ProvinceFlags::IMPASSABLE) != isImpassable) isImpassable = -1;
+    }
+
+    ImGui::PushStyleColor(ImGuiCol_Header, IM_COL32(3, 48, 102, 255));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(0, 57, 106, 255));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, IM_COL32(2, 45, 86, 255));
+    if(ImGui::CollapsingHeader("global", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::BeginChild("##joint-provinces", ImVec2(ImGui::GetContentRegionAvail().x, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
+        ImGui::PushID("joint-provinces");
+
+        // PROVINCE: terrain (combobox)
+        if (ImGui::BeginCombo("terrain type", terrain.c_str())) {
+            for (const auto& [newTerrain, _] : m_Menu->GetApp()->GetMod()->GetTerrainTypes()) {
+                const bool isSelected = (terrain == newTerrain);
+                if (ImGui::Selectable(newTerrain.c_str(), isSelected)) {
+                    for (auto& province : m_Menu->GetSelectionHandler().GetProvinces()) {
+                        province->SetTerrain(newTerrain);
+                    }
+                }
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        
+        // PROVINCE: flags (checkbox)
+        #define UPDATE_FLAG(flag, var) \
+            for (auto& province : m_Menu->GetSelectionHandler().GetProvinces()) { \
+                province->SetFlag(ProvinceFlags::flag, var); \
+            }
+
+        if (ImGui::BeginTable("province flags", 2)) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            if(ImGui::CheckBoxTristate("Coastal", &isCoastal)) UPDATE_FLAG(COASTAL, isCoastal);
+            ImGui::TableSetColumnIndex(1);
+            if(ImGui::CheckBoxTristate("Lake", &isLake)) UPDATE_FLAG(LAKE, isLake);
+
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            if(ImGui::CheckBoxTristate("Island", &isIsland)) UPDATE_FLAG(ISLAND, isIsland);
+            ImGui::TableSetColumnIndex(1);
+            if(ImGui::CheckBoxTristate("Land", &isLand)) UPDATE_FLAG(LAND, isLand);
+            
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            if(ImGui::CheckBoxTristate("Sea", &isSea)) UPDATE_FLAG(SEA, isSea);
+            ImGui::TableSetColumnIndex(1);
+            if(ImGui::CheckBoxTristate("River", &isRiver)) UPDATE_FLAG(RIVER, isRiver);
+            
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            if(ImGui::CheckBoxTristate("Impassable", &isImpassable)) UPDATE_FLAG(IMPASSABLE, isImpassable);
+
+            ImGui::EndTable();
+        }
+
+        // PROVINCE: culture (field)
+        if (ImGui::InputText("culture", &culture)) {
+            for (auto& province : m_Menu->GetSelectionHandler().GetProvinces()) {
+                province->SetCulture(culture);
+            }
+        }
+
+        // PROVINCE: religion (field)
+        if (ImGui::InputText("religion", &religion)) {
+            for (auto& province : m_Menu->GetSelectionHandler().GetProvinces()) {
+                province->SetReligion(culture);
+            }
+        }
+
+        // PROVINCE: holding type (combobox)
+        if (ImGui::BeginCombo("holding", holding.c_str())) {
+            for(const auto& [newHolding, _] : m_Menu->GetApp()->GetMod()->GetHoldingTypes()) {
+                const bool isSelected = (holding == newHolding);
+                if (ImGui::Selectable(newHolding.c_str(), isSelected)) {
+                    for (auto& province : m_Menu->GetSelectionHandler().GetProvinces()) {
+                        province->SetHolding(newHolding);
+                    }
+                }
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::PopID();
+        ImGui::EndChild();
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::Separator();
+}
+
 void PropertiesTab::RenderProvinces() {
     for(auto& province : m_Menu->GetSelectionHandler().GetProvinces()) {
                 
         if(ImGui::CollapsingHeader(fmt::format("#{} ({})", province->GetId(), province->GetName()).c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::BeginChild(fmt::format("##province-{}", province->GetId()).c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
             ImGui::PushID(province->GetId());                        
 
             // PROVINCE: id (field)
@@ -169,6 +298,7 @@ void PropertiesTab::RenderProvinces() {
             }
 
             ImGui::PopID();
+            ImGui::EndChild();
         }
     }
 }
@@ -188,6 +318,7 @@ void PropertiesTab::RenderTitles() {
     for(auto& title : m_Menu->GetSelectionHandler().GetTitles()) {
                 
         if(ImGui::CollapsingHeader(title->GetName().c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::BeginChild(fmt::format("##title-{}", title->GetName()).c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
             ImGui::PushID(title->GetName().c_str());
 
             // TITLE: name/tag (field)
@@ -486,6 +617,7 @@ void PropertiesTab::RenderTitles() {
             }
 
             ImGui::PopID();
+            ImGui::EndChild();
         }
 
     }

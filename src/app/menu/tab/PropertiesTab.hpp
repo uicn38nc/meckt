@@ -6,6 +6,8 @@ public:
 
     virtual void Update(sf::Time delta) override;
     virtual void Render() override;
+
+    void RenderJointProvinces();
     void RenderProvinces();
     void RenderTitles();
 
