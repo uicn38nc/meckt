@@ -37,7 +37,7 @@ OBJECTS      := $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 DEPENDENCIES := $(OBJECTS:.o=.d)
 
 # Build type (default, debug, release)
-BUILD_TYPE := release
+BUILD_TYPE := debug
 ifeq ($(BUILD_TYPE),debug)
     CXXFLAGS += -O0 -DDEBUG -g #-fsanitize=address
 else ifeq ($(BUILD_TYPE),release)
@@ -50,7 +50,7 @@ LDFLAGS :=  -L$(VENDOR_DIR)/lib/fmt -lfmt \
 			-L$(VENDOR_DIR)/lib/nfd/ -lnfd \
 			-L/usr/lib -lstdc++ -lm -lbfd -ldl -ldw -lsfml-graphics -lsfml-window -lsfml-system -lGL
 
-.PHONY: all build clean debug release info run
+.PHONY: all build clean info run
 all: build $(BIN_DIR)/$(TARGET)
 
 # Add the PCH target to build the precompiled header
@@ -74,6 +74,7 @@ build:
 	@clear
 	@mkdir -p $(BIN_DIR)
 	@mkdir -p $(OBJ_DIR)
+	@cp -r assets $(BIN_DIR)/assets
 
 run:
 	@./$(BIN_DIR)/$(TARGET)

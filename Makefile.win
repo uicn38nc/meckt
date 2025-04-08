@@ -50,7 +50,7 @@ LDFLAGS := -L$(VENDOR_DIR)/lib/fmt -lfmt_win \
            -ldbghelp -lpsapi \
            -static-libgcc -static-libstdc++ -static -DSFML_STATIC
 
-.PHONY: all build clean debug release info run
+.PHONY: all build clean info run
 
 all: build $(BIN_DIR)/$(TARGET)
 
@@ -76,6 +76,7 @@ build:
 	@clear
 	@mkdir -p $(BIN_DIR)
 	@mkdir -p $(OBJ_DIR)
+	@cp -r assets $(BIN_DIR)/assets
 
 run:
 	@./$(BIN_DIR)/$(TARGET)
