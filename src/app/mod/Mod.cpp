@@ -274,6 +274,16 @@ void Mod::RemoveTitle(SharedPtr<Title> title) {
     }
 }
 
+void Mod::RenameTitle(SharedPtr<Title> title, std::string formerName) {
+    for(auto [n, t] : m_Titles) {
+        for(auto [date, history] : t->GetHistory()) {
+            if(history->ContainsKey("liege") && history->Get<std::string>("liege") == formerName) {
+                history->Put("liege", title->GetName());
+            }
+        }
+    }
+}
+
 void Mod::HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color rgb, float hue, float saturation) {
     // Generate a list of colors with uniformly spaced saturations around
     // the saturation of the original color while picking a random hue.

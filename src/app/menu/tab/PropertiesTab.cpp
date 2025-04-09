@@ -322,7 +322,11 @@ void PropertiesTab::RenderTitles() {
             ImGui::PushID(title->GetName().c_str());
 
             // TITLE: name/tag (field)
-            ImGui::InputText("name", &title->m_Name);
+            std::string formerName = title->m_Name;
+            if(ImGui::InputText("name", &title->m_Name)) {
+                // Rename the title globally, including titles history.
+                m_Menu->GetApp()->GetMod()->RenameTitle(title, formerName);
+            }
             
             // TITLE: localization name (field)
             ImGui::InputText("loc. name", &title->GetLocName("english"));

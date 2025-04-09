@@ -29,6 +29,7 @@ public:
 
     void AddTitle(SharedPtr<Title> title);
     void RemoveTitle(SharedPtr<Title> title);
+    void RenameTitle(SharedPtr<Title> title, std::string formerName);
 
     void HarmonizeTitlesColors(const std::vector<SharedPtr<Title>>& titles, sf::Color color, float hue, float saturation);
     void GenerateMissingProvinces();
