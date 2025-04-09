@@ -325,15 +325,13 @@ void PropertiesTab::RenderTitles() {
             ImGui::InputText("name", &title->m_Name);
             
             // TITLE: localization name (field)
-            ImGui::InputText("localization name", &title->GetLocName("english"));
+            ImGui::InputText("loc. name", &title->GetLocName("english"));
             
-            if(!title->Is(TitleType::BARONY)) {
-                // TITLE: localization adjective (field)
-                ImGui::InputText("localization adjective", &title->GetLocAdjective("english"));
-                
-                // TITLE: localization article (field)
-                ImGui::InputText("localization article", &title->GetLocArticle("english"));
-            }
+            // TITLE: localization adjective (field)
+            ImGui::InputText("loc. adjective", &title->GetLocAdjective("english"));
+            
+            // TITLE: localization article (field)
+            ImGui::InputText("loc. article", &title->GetLocArticle("english"));
 
             // TITLE: tier/type (combo)
             ImGui::BeginDisabled();

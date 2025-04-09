@@ -897,7 +897,6 @@ void Mod::LoadLocalization() {
             LocType locType = NAME;
 
             // Titles have names, adjectives, articles and cultural names.
-            // NB: Baronies do not have any adjectives or articles.
             if(key.ends_with("_adj")) {
                 titleId = key.substr(0, key.size()-4);
                 locType = ADJECTIVE;
