@@ -861,6 +861,7 @@ void Mod::LoadLocalization() {
 
     uint countNames = 0;
     uint countAdjectives = 0;
+    uint countArticles = 0;
 
     uint maxCount = 0;
 
@@ -892,30 +893,41 @@ void Mod::LoadLocalization() {
                 continue;
             
             std::string titleId = key;
-            bool IsAdjective = false;
+            enum LocType { NAME, ADJECTIVE, ARTICLE };
+            LocType locType = NAME;
 
-            // Titles have names, adjectives and cultural names.
-            // NB: Baronies do not have any adjectives.
+            // Titles have names, adjectives, articles and cultural names.
+            // NB: Baronies do not have any adjectives or articles.
             if(key.ends_with("_adj")) {
                 titleId = key.substr(0, key.size()-4);
-                IsAdjective = true;
+                locType = ADJECTIVE;
+            }
+            else if(key.ends_with("_article")) {
+                titleId = key.substr(0, key.size()-8);
+                locType = ARTICLE;
             }
 
             auto it = m_Titles.find(titleId);
             if(it == m_Titles.end())
                 continue;
 
-            if(IsAdjective) {
-                it->second->SetLocAdjective("english", value);
-                countAdjectives++;
-            }
-            else {
-                it->second->SetLocName("english", value);
-                countNames++;
+            switch(locType) {
+                case NAME:
+                    it->second->SetLocName("english", value);
+                    countNames++;
+                    break;
+                case ADJECTIVE:
+                    it->second->SetLocAdjective("english", value);
+                    countAdjectives++;
+                    break;
+                case ARTICLE:
+                    it->second->SetLocArticle("english", value);
+                    countArticles++;
+                    break;
             }
         }
 
-        count = countNames + countAdjectives - count;
+        count = countNames + countAdjectives + countArticles - count;
 
         // Use the most used localization file for titles
         // as the main file for export.
@@ -926,7 +938,7 @@ void Mod::LoadLocalization() {
     }
 
     LOG_INFO("Default titles localization file will be {}", m_TitlesLocalizationFilePath);
-    LOG_INFO("Loaded {} titles names and {} titles adjectives from {} files", countNames, countAdjectives, filesPath.size());
+    LOG_INFO("Loaded {} titles names, {} adjectives and {} articles from {} localization files", countNames, countAdjectives, countArticles, filesPath.size());
 }
 
 void Mod::LoadTitles() {
@@ -1376,10 +1388,13 @@ void Mod::ExportLocalization() {
     fmt::println(file, "l_english:");
     for(auto [type, titles] : m_TitlesByType) {
         for(auto title : titles) {
-            // Baronies do not have adjectives.
-            if(!title->Is(TitleType::BARONY))
-                fmt::println(file, " {}_adj: {}", title->GetName(), title->GetLocAdjective("english"));
-            fmt::println(file, " {}: {}", title->GetName(), title->GetLocName("english"));
+            std::string name = title->GetLocName("english");
+            std::string adjective = title->GetLocAdjective("english");
+            std::string article = title->GetLocArticle("english");
+
+            if(!name.empty()) fmt::println(file, " {}: \"{}\"", title->GetName(), name);
+            if(!adjective.empty()) fmt::println(file, " {}_adj: \"{}\"", title->GetName(), adjective);
+            if(!article.empty()) fmt::println(file, " {}_article: \"{}\"", title->GetName(), article);
         }
     }
 
@@ -1438,6 +1453,9 @@ void Mod::DeleteTitlesLocalization() {
             std::string titleId = key;
             if(key.ends_with("_adj")) {
                 titleId = key.substr(0, key.size()-4);
+            }
+            else if(key.ends_with("_article")) {
+                titleId = key.substr(0, key.size()-8);
             }
             
             // If there isn't any titles by that name, then we keep it.

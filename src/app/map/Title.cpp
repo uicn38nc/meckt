@@ -133,6 +133,24 @@ void Title::SetLocAdjective(const std::string& lang, std::string adjective) {
     m_LocAdjectives[lang] = adjective;
 }
 
+std::map<std::string, std::string>& Title::GetLocArticles() {
+    return m_LocArticles;
+}
+
+std::string& Title::GetLocArticle(const std::string& lang) {
+    return m_LocArticles[lang];
+}
+
+std::string Title::GetLocArticle(const std::string& lang) const {
+    if(m_LocArticles.count(lang) == 0)
+        return "";
+    return m_LocArticles.at(lang);
+}
+
+void Title::SetLocArticle(const std::string& lang, std::string article) {
+    m_LocArticles[lang] = article;
+}
+
 bool Title::HasSelectionFocus() const {
     return m_SelectionFocus;
 }
