@@ -4,10 +4,29 @@ void ImGui::SetupSettings() {
     ImGuiIO& io = ImGui::GetIO();
 
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    
+
     // Disable saving windows settings
     // io.IniFilename = NULL;
     // io.LogFilename = NULL;
+}
+
+void ImGui::SetupFonts() {
+    ImGuiIO& io = ImGui::GetIO();
+
+    ImFontConfig config;
+    config.MergeMode = true;
+    config.GlyphOffset = ImVec2(0.0f, 1.0f); // Adjust vertically.
+
+    // Define ranges of glyphs to merge into the default ImGui font.
+    const ImWchar ranges[] = {
+        0x0080, 0xFFFF,
+        0
+    };
+
+    io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-VariableFont_wdth,wght.ttf", 16.0f, &config, ranges);
+
+    if(!ImGui::SFML::UpdateFontTexture())
+        LOG_ERROR("Failed to extend default font with complementary fonts.");
 }
 
 void ImGui::SetupStyle() {

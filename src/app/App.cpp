@@ -56,6 +56,7 @@ void App::Init() {
     }
 
     ImGui::SetupSettings();
+    ImGui::SetupFonts();
     ImGui::SetupStyle();
 
 #ifdef DEBUG
