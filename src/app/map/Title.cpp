@@ -97,6 +97,42 @@ void Title::RemoveHistory(Date date) {
     m_History.erase(date);
 }
 
+std::map<std::string, std::string>& Title::GetLocNames() {
+    return m_LocNames;
+}
+
+std::string& Title::GetLocName(const std::string& lang) {
+    return m_LocNames[lang];
+}
+
+std::string Title::GetLocName(const std::string& lang) const {
+    if(m_LocNames.count(lang) == 0)
+        return "";
+    return m_LocNames.at(lang);
+}
+
+void Title::SetLocName(const std::string& lang, std::string name) {
+    m_LocNames[lang] = name;
+}
+
+std::map<std::string, std::string>& Title::GetLocAdjectives() {
+    return m_LocAdjectives;
+}
+
+std::string& Title::GetLocAdjective(const std::string& lang) {
+    return m_LocAdjectives[lang];
+}
+
+std::string Title::GetLocAdjective(const std::string& lang) const {
+    if(m_LocAdjectives.count(lang) == 0)
+        return "";
+    return m_LocAdjectives.at(lang);
+}
+
+void Title::SetLocAdjective(const std::string& lang, std::string adjective) {
+    m_LocAdjectives[lang] = adjective;
+}
+
 bool Title::HasSelectionFocus() const {
     return m_SelectionFocus;
 }

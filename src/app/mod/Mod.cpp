@@ -4,6 +4,7 @@
 #include "app/map/Province.hpp"
 #include "app/map/Title.hpp"
 #include "parser/Parser.hpp"
+#include "parser/Yaml.hpp"
 
 #include <filesystem>
 #include <fmt/ostream.h>
@@ -409,6 +410,7 @@ void Mod::Load() {
     this->LoadTitlesHistory();
     this->LoadCultures();
     this->LoadReligions();
+    this->LoadLocalization();
 }
 
 void Mod::LoadHoldingTypes() {
@@ -849,6 +851,66 @@ void Mod::LoadReligions() {
     }
 
     LOG_INFO("Loaded {} faiths from {} files", m_Religions.size(), filesPath.size());
+}
+
+void Mod::LoadLocalization() {
+    std::set<std::string> filesPath = File::ListFiles(m_Dir + "/localization/english/");
+    std::set<std::string> filesPath2 = File::ListFiles(m_Dir + "/localization/replace/english/");
+    filesPath.insert(filesPath2.begin(), filesPath2.end());
+
+    uint countNames = 0;
+    uint countAdjectives = 0;
+
+    if(filesPath.empty())
+        LOG_WARNING("No localization files have been found in /localization/english/, nor /localization/replace/english/");
+
+    for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".yml"))
+            continue;
+        if(filePath.find("titles") == std::string::npos)
+            continue;
+
+        std::map<std::string, std::string> loc = Yaml::ParseFile(filePath);
+
+        // fmt::println("{}\t{}", filePath, loc.size());
+
+        for(auto [key, value] : loc) {
+            // TODO: handle cultural names.
+
+            // Skip localization that are not related to titles.
+            if(!key.starts_with("b_")
+                && !key.starts_with("c_")
+                && !key.starts_with("d_")
+                && !key.starts_with("k_")
+                && !key.starts_with("e_"))
+                continue;
+            
+            std::string titleId = key;
+            bool IsAdjective = false;
+
+            // Titles have names, adjectives and cultural names.
+            // NB: Baronies do not have any adjectives.
+            if(key.ends_with("_adj")) {
+                titleId = key.substr(key.size()-4, 4);
+                IsAdjective = true;
+            }
+
+            auto it = m_Titles.find(titleId);
+            if(it == m_Titles.end())
+                continue;
+
+            if(IsAdjective) {
+                it->second->SetLocAdjective("english", value);
+                countAdjectives++;
+            }
+            else {
+                it->second->SetLocName("english", value);
+                countNames++;
+            }
+        }
+    }
+
+    LOG_INFO("Loaded {} titles names and {} titles adjectives from {} files", countNames, countAdjectives, filesPath.size());
 }
 
 void Mod::LoadTitles() {

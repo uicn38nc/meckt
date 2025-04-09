@@ -36,6 +36,16 @@ public:
     void AddHistory(Date date, SharedPtr<Parser::Object> data);
     void RemoveHistory(Date date);
 
+    std::map<std::string, std::string>& GetLocNames();
+    std::string& GetLocName(const std::string& lang);
+    std::string GetLocName(const std::string& lang) const;
+    void SetLocName(const std::string& lang, std::string name);
+
+    std::map<std::string, std::string>& GetLocAdjectives();
+    std::string& GetLocAdjective(const std::string& lang);
+    std::string GetLocAdjective(const std::string& lang) const;
+    void SetLocAdjective(const std::string& lang, std::string adjective);
+
     virtual bool HasSelectionFocus() const;
     virtual void SetSelectionFocus(bool focus);
 
@@ -52,6 +62,9 @@ protected:
 
     std::string m_OriginalHistoryFilePath;
     std::map<Date, SharedPtr<Parser::Object>> m_History;
+
+    std::map<std::string, std::string> m_LocNames;
+    std::map<std::string, std::string> m_LocAdjectives;
 
     bool m_SelectionFocus;
 };

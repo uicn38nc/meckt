@@ -323,6 +323,12 @@ void PropertiesTab::RenderTitles() {
 
             // TITLE: name/tag (field)
             ImGui::InputText("name", &title->m_Name);
+            
+            // TITLE: localization name (field)
+            ImGui::InputText("localization name", &title->GetLocName("english"));
+            
+            // TITLE: localization adjective (field)
+            ImGui::InputText("localization adj", &title->GetLocAdjective("english"));
 
             // TITLE: tier/type (combo)
             ImGui::BeginDisabled();
