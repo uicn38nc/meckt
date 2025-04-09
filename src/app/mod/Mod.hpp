@@ -57,8 +57,10 @@ public:
     void ExportProvincesHistory();
     void ExportTitles();
     void ExportTitlesHistory();
-
     void ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int depth);
+
+    void ExportLocalization();
+    void DeleteTitlesLocalization();
 
 private:
     std::string m_Dir;
@@ -82,4 +84,6 @@ private:
     std::string m_DefaultLandTerrain;
     std::string m_DefaultSeaTerrain;
     std::string m_DefaultCoastalSeaTerrain;
+
+    std::string m_TitlesLocalizationFilePath;
 };

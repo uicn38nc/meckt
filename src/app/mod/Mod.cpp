@@ -10,7 +10,8 @@
 #include <fmt/ostream.h>
 
 Mod::Mod(const std::string& dir)
-: m_Dir(dir) {}
+: m_Dir(dir), m_TitlesLocalizationFilePath(dir + "/localization/english/00_titles_l_english.yml")
+{}
 
 std::string Mod::GetDir() const {
     return m_Dir;
@@ -861,6 +862,8 @@ void Mod::LoadLocalization() {
     uint countNames = 0;
     uint countAdjectives = 0;
 
+    uint maxCount = 0;
+
     if(filesPath.empty())
         LOG_WARNING("No localization files have been found in /localization/english/, nor /localization/replace/english/");
 
@@ -873,6 +876,9 @@ void Mod::LoadLocalization() {
         std::map<std::string, std::string> loc = Yaml::ParseFile(filePath);
 
         // fmt::println("{}\t{}", filePath, loc.size());
+
+        // Count the number of localization for this file.
+        uint count = countNames + countAdjectives;
 
         for(auto [key, value] : loc) {
             // TODO: handle cultural names.
@@ -908,8 +914,18 @@ void Mod::LoadLocalization() {
                 countNames++;
             }
         }
+
+        count = countNames + countAdjectives - count;
+
+        // Use the most used localization file for titles
+        // as the main file for export.
+        if(count > maxCount) {
+            maxCount = count;
+            m_TitlesLocalizationFilePath = filePath;
+        }
     }
 
+    LOG_INFO("Default titles localization file will be {}", m_TitlesLocalizationFilePath);
     LOG_INFO("Loaded {} titles names and {} titles adjectives from {} files", countNames, countAdjectives, filesPath.size());
 }
 
@@ -1032,6 +1048,8 @@ void Mod::Export() {
 
     this->ExportTitles();
     this->ExportTitlesHistory();
+
+    this->ExportLocalization();
 }
 
 void Mod::ExportDefaultMapFile() {
@@ -1345,5 +1363,94 @@ void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int de
             this->ExportTitle(dejureTitle, file, depth+1);
             fmt::println(file, "{}}}", indent);
         }
+    }
+}
+
+void Mod::ExportLocalization() {
+    // Remove all localization related to titles from the files
+    // in order to centralize the loc and avoid duplicates.
+    this->DeleteTitlesLocalization();
+
+    std::ofstream file(m_TitlesLocalizationFilePath);
+
+    fmt::println(file, "l_english:");
+    for(auto [type, titles] : m_TitlesByType) {
+        for(auto title : titles) {
+            // Baronies do not have adjectives.
+            if(!title->Is(TitleType::BARONY))
+                fmt::println(file, " {}_adj: {}", title->GetName(), title->GetLocAdjective("english"));
+            fmt::println(file, " {}: {}", title->GetName(), title->GetLocName("english"));
+        }
+    }
+
+    file.close();
+}
+
+void Mod::DeleteTitlesLocalization() {
+    std::set<std::string> filesPath = File::ListFiles(m_Dir + "/localization/english/");
+    std::set<std::string> filesPath2 = File::ListFiles(m_Dir + "/localization/replace/english/");
+    filesPath.insert(filesPath2.begin(), filesPath2.end());
+
+    for(const auto& filePath : filesPath) {
+        if(!filePath.ends_with(".yml"))
+            continue;
+        if(filePath.find("titles") == std::string::npos)
+            continue;
+        if(filePath == m_TitlesLocalizationFilePath)
+            continue;
+
+        std::ifstream file(filePath);
+        std::ofstream tmpFile(filePath + ".tmp");
+        std::map<std::string, std::string> loc = Yaml::ParseFile(filePath);
+
+        // Rewrite the localization line by line while
+        // omitting titles and adjectives localization.
+        std::string line;
+        while(std::getline(file, line)) {
+            // Remove all blanks from the string until reading ':'
+            // in order to extract the key.
+            std::string key = "";
+            for(int i = 0; i < line.size(); i++) {
+                if(line[i] == ' ' || line[i] == '\t' || line[i] == '\r')
+                    continue;
+                if(line[i] == ':' || line[i] == '#')
+                    break;
+                key.push_back(line[i]);
+            }
+
+            // If the line is empty or contains a comment, then we keep it.
+            if(key.empty()) {
+                fmt::println(tmpFile, "{}", line);
+                continue;
+            }
+
+            // If the line is not related to titles, then we keep it.
+            if(!key.starts_with("b_")
+            && !key.starts_with("c_")
+            && !key.starts_with("d_")
+            && !key.starts_with("k_")
+            && !key.starts_with("e_")) {
+                fmt::println(tmpFile, "{}", line);
+                continue;
+            }
+
+            // Determine the title name/id from the key.
+            std::string titleId = key;
+            if(key.ends_with("_adj")) {
+                titleId = key.substr(0, key.size()-4);
+            }
+            
+            // If there isn't any titles by that name, then we keep it.
+            auto it = m_Titles.find(titleId);
+            if(it == m_Titles.end()) {
+                fmt::println(tmpFile, "{}", line);
+                continue;
+            }
+        }
+
+        file.close();
+        tmpFile.close();
+        std::remove(filePath.c_str());
+        std::rename((filePath + ".tmp").c_str(), filePath.c_str());
     }
 }
