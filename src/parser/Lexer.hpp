@@ -12,7 +12,8 @@ namespace Parser {
         // Operators
         EQUAL,
         LESS, LESS_EQUAL,
-        GREATER, GREATER_EQUAL, 
+        GREATER, GREATER_EQUAL,
+        NOT_EQUAL, EXIST,
 
         // Literals
         STRING, NUMBER, BOOLEAN, DATE,

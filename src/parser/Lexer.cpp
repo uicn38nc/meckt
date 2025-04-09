@@ -73,6 +73,10 @@ PToken Parser::ReadToken(Reader& reader) {
             return nullptr;
         case '"': return ReadString(reader);
         default:
+            if(ch == '!' && reader.Match('='))
+                return MakeShared<Token>(TokenType::NOT_EQUAL);
+            if(ch == '?' && reader.Match('='))
+                return MakeShared<Token>(TokenType::EXIST);
             if(String::IsDigit(ch) || ch == '-') {
                 PToken token = ReadNumber(reader);
                 if(token != nullptr)

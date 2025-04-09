@@ -647,6 +647,8 @@ SharedPtr<Object> Parser::Parse(std::deque<PToken>& tokens, uint depth) {
                     || token->Is(TokenType::GREATER_EQUAL)
                     || token->Is(TokenType::LESS)
                     || token->Is(TokenType::LESS_EQUAL)
+                    || token->Is(TokenType::NOT_EQUAL)
+                    || token->Is(TokenType::EXIST)
                 ) {
                     state = ParsingState::VALUE;
                     op = (Operator)(((int) token->GetType()) - 3);
@@ -1241,6 +1243,8 @@ void Parser::Tests() {
         ASSERT("le operator", Parser::Operator::LESS_EQUAL, data->GetOperator("op3"));
         ASSERT("gt operator", Parser::Operator::GREATER, data->GetOperator("op4"));
         ASSERT("ge operator", Parser::Operator::GREATER_EQUAL, data->GetOperator("op5"));
+        ASSERT("neq operator", Parser::Operator::NOT_EQUAL, data->GetOperator("op6"));
+        ASSERT("exists operator", Parser::Operator::EXIST, data->GetOperator("op7"));
     }
     catch(std::exception& e) {
         throw std::runtime_error(fmt::format("Failed to parse 'operators.txt'\n{}", e.what()));

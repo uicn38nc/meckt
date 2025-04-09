@@ -24,6 +24,8 @@ namespace Parser {
         LESS_EQUAL,
         GREATER,
         GREATER_EQUAL,
+        NOT_EQUAL,
+        EXIST,
     };
 
     enum class ObjectType {
@@ -229,6 +231,8 @@ public:
             case Parser::Operator::LESS_EQUAL: return format_to(ctx.out(), "<=");
             case Parser::Operator::GREATER: return format_to(ctx.out(), ">");
             case Parser::Operator::GREATER_EQUAL: return format_to(ctx.out(), ">=");
+            case Parser::Operator::NOT_EQUAL: return format_to(ctx.out(), "!=");
+            case Parser::Operator::EXIST: return format_to(ctx.out(), "?=");
         }
         return format_to(ctx.out(), "");
     }
