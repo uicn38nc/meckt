@@ -328,7 +328,7 @@ void PropertiesTab::RenderTitles() {
             ImGui::InputText("localization name", &title->GetLocName("english"));
             
             // TITLE: localization adjective (field)
-            ImGui::InputText("localization adj", &title->GetLocAdjective("english"));
+            ImGui::InputText("localization adjective", &title->GetLocAdjective("english"));
 
             // TITLE: tier/type (combo)
             ImGui::BeginDisabled();

@@ -891,7 +891,7 @@ void Mod::LoadLocalization() {
             // Titles have names, adjectives and cultural names.
             // NB: Baronies do not have any adjectives.
             if(key.ends_with("_adj")) {
-                titleId = key.substr(key.size()-4, 4);
+                titleId = key.substr(0, key.size()-4);
                 IsAdjective = true;
             }
 
