@@ -26,6 +26,59 @@ Meckt is a tool whose goal is making total conversion mod easier and less cumber
 - **Unwrap Title:** `Ctrl + Left Mouse Button (LMB)` on the liege title.
 - **Wrap Titles Back:** `Right Mouse Button (RMB)` on one of the vassals.
 
+## Compiling
+
+### Linux
+
+1. Clone the repository (with submodules):
+```bash
+git clone --recursive https://github.com/Xorrad/meckt.git
+```
+
+2. Install SFML using the package manager:
+```bash
+sudo apt-get install libsfml-dev
+```
+
+3. In `vendor/includes/imgui/imgui/misc/cpp/imgui_stdlib.cpp` replace line 10 with:
+```cpp
+#include "../../imgui.h"
+```
+
+4. Compile and run *meckt* using:
+```bash
+make
+```
+
+
+### Windows
+
+1. Clone the repository (with submodules):
+```bash
+git clone --recursive https://github.com/Xorrad/meckt.git
+```
+
+2. Download [SFML 2.6.2](https://www.sfml-dev.org/download/sfml/2.6.2/).  
+Extract the downloaded package into the `vendor/sfml/` directory so that the folder structure looks like:
+```
+vendor/sfml/include
+vendor/sfml/lib
+...
+```
+
+3. Install Make and a compatible C++ compiler for Windows.  
+A good starting point is to use the [w64devkit](https://github.com/skeeto/w64devkit), which includes both.
+
+4. In `vendor/includes/imgui/imgui/misc/cpp/imgui_stdlib.cpp` replace line 10 with:
+```cpp
+#include "../../imgui.h"
+```
+
+5. Compile and run *meckt* using:
+```bash
+make
+```
+
 ## Contributing
 
 Contributions to the project are highly appreciated! There are several ways to get involved: you can contribute by reporting any issues you encounter, suggesting new features that could enhance the project, or even by actively participating in the development process through the submission of pull requests.
