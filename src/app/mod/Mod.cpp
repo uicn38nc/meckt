@@ -1042,10 +1042,31 @@ std::vector<SharedPtr<Title>> Mod::ParseTitles(const std::string& filePath, Shar
                         LOG_ERROR("Title missing county capital in definition: {}", key);
                     }
                 }
+
+                if(value->ContainsKey("cultural_names")) {
+                    SharedPtr<Parser::Object> culturalNames = value->GetObject("cultural_names");
+                    if(culturalNames->Is(Parser::ObjectType::OBJECT)) {
+                        // TODO: Rewrite this whole chunk of code correctly.
+                        for(auto [culture, p] : culturalNames->GetEntries()) {
+                            auto [op, o] = p;
+                            std::string name = "";
+                            if(o->Is(Parser::ObjectType::ARRAY)) {
+                                name = std::get<std::vector<std::string>>(o->AsArray()).front();
+                            }
+                            else if(o->Is(Parser::ObjectType::STRING)) {
+                                name = (std::string) *o;
+                            }
+                            if(!name.empty()) {
+                                title->AddCulturalName(std::get<std::string>(culture), name);
+                            }
+                        }
+                    }
+                }
             }
 
             value->Remove("color");
             value->Remove("landless");
+            value->Remove("cultural_names");
             title->SetOriginalFilePath(filePath);
             title->SetOriginalData(value);
 
@@ -1345,12 +1366,24 @@ void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int de
 
     #define EXPORT_PROPERTIES(key, value) fmt::println(file, "{}{} = {}", indent, key, value)
 
+    const auto ExportCulturalNames = [&]() {
+        if(!title->GetCulturalNames().empty()) {
+            fmt::println(file, "\n{}cultural_names = {{", indent);
+            for(auto [culture, name] : title->GetCulturalNames()) {
+                fmt::println(file, "{}\t{} = {}", indent, culture, name);
+            }
+            fmt::println(file, "{}}}", indent);
+        }
+    };
+
     EXPORT_PROPERTIES("color", fmt::format("{{ {} {} {} }}", title->GetColor().r, title->GetColor().g, title->GetColor().b));
         
     if(title->Is(TitleType::BARONY)) {
         SharedPtr<BaronyTitle> baronyTitle = CastSharedPtr<BaronyTitle>(title);
         EXPORT_PROPERTIES("province", baronyTitle->GetProvinceId());
         // TODO: warning if there is no province with this id.
+
+        ExportCulturalNames();
 
         if(!data->GetEntries().empty())
             fmt::println(file, "{}", Parser::Format::FormatObject(data, depth, true));
@@ -1375,6 +1408,8 @@ void Mod::ExportTitle(const SharedPtr<Title>& title, std::ofstream& file, int de
             
         if(title->IsLandless())
             EXPORT_PROPERTIES("capital", "yes");
+
+        ExportCulturalNames();
 
         if(!data->GetEntries().empty())
             fmt::println(file, "\n{}", Parser::Format::FormatObject(data, depth, true));

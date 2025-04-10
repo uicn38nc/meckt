@@ -97,6 +97,18 @@ void Title::RemoveHistory(Date date) {
     m_History.erase(date);
 }
 
+std::map<std::string, std::string>& Title::GetCulturalNames() {
+    return m_CulturalNames;
+}
+
+void Title::AddCulturalName(const std::string& culture, std::string name) {
+    m_CulturalNames[culture] = name;
+}
+
+void Title::RemoveCulturalName(const std::string& culture) {
+    m_CulturalNames.erase(culture);
+}
+
 std::map<std::string, std::string>& Title::GetLocNames() {
     return m_LocNames;
 }

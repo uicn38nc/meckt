@@ -355,11 +355,49 @@ void PropertiesTab::RenderTitles() {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
             ImGui::Checkbox("Landless", &title->m_Landless);
             ImGui::PopStyleVar();
+
+            // TITLE: cultural names (collapsing header + child window (for borders) + collapsing header for each culture)
+            ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+            if(ImGui::CollapsingHeader("cultural names")) {
+                if(ImGui::BeginChild((title->GetName() + "-cultural-names").c_str(), ImVec2(0, 100), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
+
+                    static std::string newCulture = "";
+
+                    const auto& AddNewCulture = [&]() {
+                        if(title->GetCulturalNames().count(newCulture) > 0)
+                            return;
+                        title->AddCulturalName(newCulture, "cn_");
+                    };
+
+                    if(ImGui::InputText("##culture", &newCulture, ImGuiInputTextFlags_EnterReturnsTrue)) {
+                        AddNewCulture();
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("add")) {
+                        AddNewCulture();
+                    }
+
+                    std::map<std::string, std::string>& culturalNames = title->GetCulturalNames();
+                    for(auto it = culturalNames.begin(); it != culturalNames.end(); ) {
+                        std::string culture = it->first;
+                        std::string& name = it->second;
+                        if(ImGui::Button("x")) {
+                            it = culturalNames.erase(it);
+                        }
+                        else {
+                            ++it;
+                        }
+                        ImGui::SameLine();
+                        ImGui::InputText(culture.c_str(), &name);
+                    }
+                }
+                ImGui::EndChild();
+            }
             
             // TITLE: history (collapsing header + child window (for borders) + collapsing header for each dates)
             ImGui::SetNextItemOpen(false, ImGuiCond_Once);
             if(ImGui::CollapsingHeader("history")) {
-                if(ImGui::BeginChild((title->GetName() + "-history").c_str(), ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
+                if(ImGui::BeginChild((title->GetName() + "-history").c_str(), ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
 
                     static std::string date = "";
                     static bool isDateValid = true;
@@ -481,7 +519,7 @@ void PropertiesTab::RenderTitles() {
                 // HIGHTITLE: dejure titles (list)
                 ImGui::SetNextItemOpen(false, ImGuiCond_Once);
                 if(ImGui::CollapsingHeader("dejure titles")) {
-                    ImGui::BeginChild("dejure titles", ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY | ImGuiChildFlags_Border, ImGuiWindowFlags_None);
+                    ImGui::BeginChild("dejure titles", ImVec2(0, 250), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY, ImGuiWindowFlags_None);
 
                     if(ImGui::BeginMenuBar()) {
                         if(ImGui::BeginMenu("dejure titles")) {
